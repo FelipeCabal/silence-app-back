@@ -1,13 +1,16 @@
 import { Controller, Post, Param, UseGuards, Req, Get } from '@nestjs/common';
 import { LikesService } from './likes.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @Controller('likes')
+@ApiTags('likes')
 @UseGuards(AuthGuard)
 export class LikesController {
   constructor(private readonly likesService: LikesService) { }
 
   @Post(':postId')
+  @ApiOperation({ summary: "Toggle like" })
   async manejoLikes(
     @Param('postId') postId: number,
     @Req() req: any
@@ -17,6 +20,7 @@ export class LikesController {
   }
 
   @Get(':postId')
+  @ApiOperation({ summary: "get all posts likes" })
   async findAllLikes(
     @Param('postId') postId: number
   ) {
@@ -24,6 +28,7 @@ export class LikesController {
   }
 
   @Get('like/:likeId')
+  @ApiOperation({ summary: "get one like" })
   async findOneLike(
     @Param('likeId') likeId: number
   ) {

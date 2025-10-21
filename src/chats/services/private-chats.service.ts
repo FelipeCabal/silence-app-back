@@ -60,6 +60,7 @@ export class PrivateChatsService {
             .where('privateChat.amistad.id IN (:...friendshipIds)', { friendshipIds })
             .getMany();
 
+
         let chatsList = friendships.flatMap((friendship) => {
             return privateChats
                 .filter((chat) => chat.amistad.id === friendship.solicitudId.id)
@@ -69,7 +70,7 @@ export class PrivateChatsService {
                         id: chat.id,
                         createdAt: chat.createAt,
                         friendName: friendship.user.nombre,
-                        friendId: friendship.user.id,
+                        friend: friendship.user,
                     };
                 });
         });

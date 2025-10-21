@@ -33,10 +33,12 @@ export class User {
     pais: string
 
     @Column({ nullable: true })
-    imagen_perfil: string
+    imagen: string
+
 
     @Column({ default: true })
     showLikes: boolean
+
 
     @OneToMany(() => Publicaciones, (publicaciones) => publicaciones.user)
     publicaciones: Publicaciones[]
@@ -52,7 +54,7 @@ export class User {
 
     @OneToMany(() => Like, (likes) => likes.user)
     likes: Like[]
-  
+
     @ManyToMany(() => Grupos, (grupo) => grupo.miembros)
     grupos: Grupos[];
 }

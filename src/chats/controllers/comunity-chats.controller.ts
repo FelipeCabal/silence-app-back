@@ -13,6 +13,7 @@ export class ComunidadesController {
     constructor(private readonly comunidadesService: ComunidadesService) { }
 
     @Get()
+    @ApiOperation({ summary: 'obtener todas las comunidades del usuario logueado' })
     findAll(@Query() queries: ComunityAndGroupQueries) {
         return this.comunidadesService.findAll(queries);
     }
@@ -44,7 +45,7 @@ export class ComunidadesController {
         return this.comunidadesService.create(createCommunityDto, ownerId);
     }
 
-    @Patch(':id/miembros')
+    @Post(':id/miembros')
     @ApiOperation({ summary: 'Añadir miembro a comunidad' })
     addMember(
         @Param('id', ParseIntPipe) communityId: number,

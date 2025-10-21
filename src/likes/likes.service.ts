@@ -43,7 +43,7 @@ export class LikesService {
 
       await this.likeRepository.save(newLike);
 
-      return 'se añadió tu like al post';
+      return newLike;
     }
   }
 
@@ -59,11 +59,12 @@ export class LikesService {
 
     const likes = await this.likeRepository
       .createQueryBuilder('like')
+      .leftJoinAndSelect('like.user', 'users')
       .where('like.publicacionesId = :postId', { postId })
       .getMany()
 
     if (likes.length === 0) {
-      return "no hay reacciones en esta publicación"
+      throw new HttpException("likes not found", HttpStatus.NOT_FOUND);
     }
 
     return likes;
@@ -102,6 +103,7 @@ export class LikesService {
       likes = await this.publicacionesRepository
         .createQueryBuilder('post')
         .innerJoin('post.likes', 'like')
+        .leftJoinAndSelect('post.user', 'user')
         .where("like.userId = :userId", { userId })
         .getMany();
 

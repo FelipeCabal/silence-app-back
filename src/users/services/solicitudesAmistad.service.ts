@@ -144,4 +144,22 @@ export class SolicitudesAmistadService {
 
         return request;
     }
+    async findUserRequests(userId: number) {
+        const user = await this.usersService.findOneUser(userId);
+
+        if (!user) {
+            throw new HttpException("user not found", HttpStatus.NOT_FOUND);
+        }
+
+        const requests = await this.solicitudRepository.find({
+            where: [
+                { userEnvia: user },
+                { userRecibe: user }
+            ],
+            relations: ['userEnvia', 'userRecibe']
+        });
+
+        return requests;
+    }
+
 }

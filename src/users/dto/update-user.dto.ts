@@ -12,4 +12,6 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
     @IsString()
     pais?: string
 
+    @IsString()
+    imagen?: string
 }
