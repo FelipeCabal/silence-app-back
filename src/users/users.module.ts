@@ -7,9 +7,16 @@ import { SolicitudAmistad } from './entities/solicitud.entity';
 import { SolicitudesController } from './controllers/solicitudes.controller';
 import { SolicitudesAmistadService } from './services/solicitudesAmistad.service';
 import { ChatsModule } from 'src/chats/chats.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { userModelSchema, userSchema } from './users.schema';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, SolicitudAmistad]),
+  imports: [MongooseModule.forFeature([
+    {
+      name: userSchema.name,
+      schema: userModelSchema
+    }
+  ]),
   forwardRef(() => ChatsModule),
   ],
   controllers: [UsersController, SolicitudesController],
