@@ -8,7 +8,7 @@ import { SolicitudAmistad } from '../entities/solicitud.entity';
 import { SolicitudesAmistadService } from './solicitudesAmistad.service';
 import { UserQueries } from '../dto/querie.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { userSchema } from '../users.schema';
+import { userSchema } from '../userSchema/users.schema';
 import { Model } from 'mongoose';
 
 @Injectable()

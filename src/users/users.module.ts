@@ -8,7 +8,7 @@ import { SolicitudesController } from './controllers/solicitudes.controller';
 import { SolicitudesAmistadService } from './services/solicitudesAmistad.service';
 import { ChatsModule } from 'src/chats/chats.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { userModelSchema, userSchema } from './users.schema';
+import { userModelSchema, userSchema } from './userSchema/users.schema';
 
 @Module({
   imports: [MongooseModule.forFeature([
