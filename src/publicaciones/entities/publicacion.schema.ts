@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { ComentariosSchema } from '../comentarios/entities/comentarios.schema';
+import { Comentario } from '../comentarios/entities/comentarios.schema';
+import { ComentarioResponseDto } from '../comentarios/dto/responses/comentario-response.dto';
 
 @Schema({ timestamps: true, collection: 'publicaciones' })
 export class Publicacion extends Document {
@@ -13,8 +14,8 @@ export class Publicacion extends Document {
   @Prop({ default: false })
   esAnonimo: boolean;
 
-  @Prop({ type: [ComentariosSchema], default: [] })
-  comentarios: ComentariosSchema[];
+  @Prop({ type: [ComentarioResponseDto], default: [] })
+  comentarios: ComentarioResponseDto[];
 
   @Prop({ default: 0 })
   cantLikes?: number;
