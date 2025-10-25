@@ -1,21 +1,24 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Types } from "mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
 
-@Schema({
-    timestamps: true
-})
-export class comentariosSchema {
+@Schema({ timestamps: true, collection: 'comentarios' })
+export class Comentario extends Document {
+  @Prop({
+    required: true,
+    type: Types.ObjectId,
+    ref: 'Publicacion',
+  })
+  publicacion: Types.ObjectId;
 
-    @Prop({ required: true })
-    usuarioId: number
+  @Prop({
+    required: true,
+    type: String,
+    trim: true,
+  })
+  comentario: string;
 
-    @Prop({
-        trim: true
-    })
-    comentario: string
-
-    @Prop({ required: true })
-    postId: number
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export const comentarioModelSchema = SchemaFactory.createForClass(comentariosSchema)
+export const ComentarioSchema = SchemaFactory.createForClass(Comentario);
