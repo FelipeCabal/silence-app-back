@@ -1,97 +1,95 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { comentariosSchema } from './entities/comentarios.schema';
+import { Comentario } from './entities/comentarios.schema';
 import { Model } from 'mongoose';
-import { CreateComentariosDto } from './dto/create-comentarios.dto';
+import { CreateComentarioDto } from './dto/requests/create-comentario.dto';
+import { ComentarioResponseDto } from './dto/responses/comentario-response.dto';
+import { UpdateComentarioDto } from './dto/requests/update-comentario.dto';
+import { ComentariosApplicationService } from '../comentarios-application.service';
 import { PublicacionesService } from '../publicaciones.service';
-import { UsersService } from 'src/users/services/users.service';
-
 
 @Injectable()
 export class ComentariosService {
-    constructor
-        (
-            private readonly publicacionesService: PublicacionesService,
-            private readonly usersService: UsersService,
-            @InjectModel(comentariosSchema.name) private comentariosModel: Model<comentariosSchema>
-        ) { }
+  constructor(
+    @InjectModel(Comentario.name) private comentariosModel: Model<Comentario>,
+    private readonly publicacionesService: PublicacionesService,
+    private readonly comentariosApplicationService: ComentariosApplicationService,
+  ) {}
 
-    /**
-     * 
-     * @param postId 
-     * @param createComentarioDto 
-     * @returns 
-     */
-    async create(createComentarioDto: CreateComentariosDto, postId: number, usuarioId: number) {
-        const postToComment = await this.publicacionesService.findOne(postId);
+  /**
+   * Create a new comment
+   * @param data - The data to create a new comment
+   * @returns The created comment
+   */
+  async createComentario(
+    publicacionId: string,
+    data: CreateComentarioDto,
+  ): Promise<ComentarioResponseDto> {
+    const publicacion = await this.publicacionesService.findOne(publicacionId);
 
-        if (!postToComment) {
-            throw new HttpException("Post not found", HttpStatus.NOT_FOUND)
-        }
+    if (!publicacion) return null;
 
-        const newComment = new this.comentariosModel({
-            ...createComentarioDto,
-            postId,
-            usuarioId
-        });
-        const comment = await newComment.save();
+    const comentario = await this.comentariosModel.create({
+      ...data,
+      publicacion: publicacionId,
+    });
 
-        return comment.toObject();
-    }
+    const response = ComentarioResponseDto.fromModel(comentario);
 
-    /**
-     * 
-     * @param postId 
-     * @returns 
-     */
-    async findAllComments(postId: number) {
-        const comments = await this.comentariosModel.find({ postId }).exec();
+    await this.comentariosApplicationService.createComentarioOnPost(
+      response,
+      publicacionId,
+    );
 
-        const comentario = await Promise.all(comments.map(async (comment) => {
-            const user = await this.usersService.findOneUser(comment.usuarioId);
-            return {
-                id: comment._id.toString(),
-                postId: comment.postId,
-                textoComentario: comment.comentario,
-                usuario: {
-                    id: user.id,
-                    nombre: user.nombre,
-                    email: user.email,
-                    fechaNto: user.fechaNto,
-                    sexo: user.sexo,
-                    pais: user.pais,
-                    imagenPerfil: user.imagen
-                }
-            }
-        }));
+    return response;
+  }
 
-        return comentario;
-        
-    }
+  /**
+   * Update a comment by its ID
+   * @param commentId - The ID of the comment
+   * @param data - The data to update the comment
+   * @returns The updated comment, or null if not found
+   */
+  async updateComentario(
+    commentId: string,
+    data: UpdateComentarioDto,
+  ): Promise<ComentarioResponseDto | null> {
+    const comentario = await this.comentariosModel
+      .findByIdAndUpdate(commentId, data, { new: true })
+      .exec();
 
-    /**
-     * 
-     * @param commentId 
-     * @param userId 
-     * @returns 
-     */
-    async deleteComment(commentId: string, userId: number, postId: number) {
-        const comment = await this.comentariosModel.findById(commentId);
-        if (!comment) {
-            throw new HttpException("comment not found", HttpStatus.NOT_FOUND);
-        }
+    if (!comentario) return null;
 
-        const post = await this.publicacionesService.findOne(postId);
-        if (!post) {
-            throw new HttpException("post not found", HttpStatus.NOT_FOUND);
-        }
+    const response = ComentarioResponseDto.fromModel(comentario);
 
-        if (comment.usuarioId !== userId && post.user.id !== userId) {
-            throw new HttpException("don't have authorization", HttpStatus.UNAUTHORIZED);
-        }
+    await this.comentariosApplicationService.updateComentarioOnPost(
+      response,
+      commentId,
+      comentario.publicacion.toString(),
+    );
 
-        await this.comentariosModel.findByIdAndDelete(commentId);
+    return response;
+  }
 
-        return { message: "Comment deleted successfylly" }
-    }
+  /**
+   * Delete a comment by its ID
+   * @param commentId - The ID of the comment
+   * @returns The deleted comment, or null if not found
+   */
+  async deleteComentario(
+    commentId: string,
+  ): Promise<ComentarioResponseDto | null> {
+    const comentario = await this.comentariosModel
+      .findByIdAndDelete(commentId)
+      .exec();
+
+    if (!comentario) return null;
+
+    await this.comentariosApplicationService.deleteComentarioOnPost(
+      commentId,
+      comentario.publicacion.toString(),
+    );
+
+    return ComentarioResponseDto.fromModel(comentario);
+  }
 }
