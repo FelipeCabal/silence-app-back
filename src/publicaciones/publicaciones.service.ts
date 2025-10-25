@@ -1,170 +1,75 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreatePublicacionesDto } from './dto/create-publicacione.dto';
-import { UpdatePublicacionesDto } from './dto/update-publicacione.dto';
-import { UsersService } from 'src/users/services/users.service';
-import { Publicaciones } from './entities/publicaciones.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Publicacion } from "./entities/publicacion.schema";
+import { Model } from "mongoose";
+import { CreatePublicacionDto } from "./dto/requests/create-publicacion.dto";
+import { UpdatePublicacionDto } from "./dto/requests/update-publicacion.dto";
+import { PublicacionResponseDto } from "./dto/responses/publicacion-response.dto";
+import { Public } from "src/auth/decorators/public.decorator";
 
 @Injectable()
 export class PublicacionesService {
+    constructor(
+        @InjectModel(Publicacion.name) private publicacionesModel: Model<Publicacion>
+    ) { }
 
-  constructor(
-    private readonly usersService: UsersService,
-    @InjectRepository(Publicaciones)
-    private readonly publicacionesRepository: Repository<Publicaciones>
-
-  ) { }
-
-
-  /**
-   * Create new post
-   * @param userId id from post' creator 
-   * @param createPublicacionesDto data to create a new post
-   * @returns post newly created 
-   */
-  async create(userId: number, createPublicacionesDto: CreatePublicacionesDto) {
-    if (createPublicacionesDto.esAnonimo === true) {
-      const newPost = this.publicacionesRepository.create(createPublicacionesDto);
-
-      return this.publicacionesRepository.save(newPost);
-    }
-    const user = await this.usersService.findOneUser(userId);
-    const newPost = await this.publicacionesRepository.create(createPublicacionesDto);
-    newPost.user = user;
-
-    return this.publicacionesRepository.save(newPost)
-  }
-
-  /**
-   * findALL
-   * @param userId logged user
-   * @returns all posts
-   */
-  async findAll(userId: number) {
-    const friends = await this.usersService.findAllFriends(userId);
-
-    const friendsIds = friends.map((friend => friend.user.id));
-
-    let friendsPosts = []
-    let otherPosts = []
-
-    if (friendsIds.length > 0) {
-      friendsPosts = await this.publicacionesRepository
-        .createQueryBuilder('publicaciones')
-        .leftJoinAndSelect('publicaciones.user', 'users')
-        .where("publicaciones.userId IN (:...friendsIds)", { friendsIds })
-        .orderBy("publicaciones.id", "DESC")
-        .getMany()
-
-      otherPosts = await this.publicacionesRepository
-        .createQueryBuilder('publicaciones')
-        .leftJoinAndSelect('publicaciones.user', 'users')
-        .where("publicaciones.userId NOT IN (:...friendsIds)", { friendsIds })
-        .orderBy('publicaciones.id', 'DESC')
-        .getMany();
-    } else {
-      otherPosts = await this.publicacionesRepository
-        .createQueryBuilder('publicaciones')
-        .leftJoinAndSelect('publicaciones.user', 'users')
-        .orderBy("publicaciones.id", "DESC")
-        .getMany()
+    /**
+     * Create a new post
+     * @param data - The data to create a new post
+     * @returns The created post
+     */
+    async create(data: CreatePublicacionDto): Promise<PublicacionResponseDto> {
+        const newPost = await this.publicacionesModel.create(data);
+        return PublicacionResponseDto.fromModel(newPost);
     }
 
-    if (!friendsPosts && !otherPosts) {
-      return "no hay posts"
+    /**
+     * Get all posts
+     * @returns An array of all posts
+     */
+    async findAll(): Promise<PublicacionResponseDto[]> {
+        const posts = await this.publicacionesModel.find().exec();
+        return posts.map(post => PublicacionResponseDto.fromModel(post));
     }
 
-    const posts = [...friendsPosts, ...otherPosts]
-
-    return posts;
-  }
-
-  /**
-   * Find one post 
-   * @param id from post that being searched
-   * @returns post with the given id 
-   * @throws {HttpException} if there is not post
-   */
-  async findOne(id: number) {
-    const publicacion = await this.publicacionesRepository.findOne({
-      where: { id: id.toString() },
-      relations: ['user'],
-    });
-
-    if (!publicacion) {
-      throw new HttpException('post not found', HttpStatus.NOT_FOUND);
-    }
-    return publicacion;
-  }
-
-  /**
-   * findByUser
-   * @param user is the id from users that have created post 
-   * @returns all posts that have been created for the given user
-   * @throws {HttpException} if the user not found 
-   */
-  async findByUser(userId: number) {
-    const userPosts = await this.publicacionesRepository
-      .createQueryBuilder('publicaciones')
-      .leftJoinAndSelect('publicaciones.user', 'users')
-      .where('users.id = :userId', { userId })
-      .orderBy('publicaciones.id', 'DESC')
-      .getMany();
-
-    if (!userPosts.length) {
-      throw new HttpException("user's posts not found", HttpStatus.NOT_FOUND);
-    }
-    return userPosts;
-  }
-
-  /**
-   * update
-   * @param id post id
-   * @param updatePublicacionesDto data to update post
-   * @param userId user id
-   * @returns post updated
-   * @throws {HttpException} if the post doesn't exists, if the user isn´t authorized, internal error.
-   */
-  async update(id: number, updatePublicacionesDto: UpdatePublicacionesDto, userId: number) {
-    const post = await this.findOne(id)
-
-    if (!post) {
-      throw new HttpException("post doesn't exists. ", HttpStatus.NOT_FOUND);
+    /**
+     * Get a post by its ID
+     * @param id - The ID of the post
+     * @returns The post with the given ID, or null if not found
+     */
+    async findOne(id: string): Promise<PublicacionResponseDto | null> {
+        const post = await this.publicacionesModel.findById(id).exec();
+        return post ? PublicacionResponseDto.fromModel(post) : null;
     }
 
-    if (post.user.id !== userId) {
-      throw new HttpException("You don't have authorization for update", HttpStatus.UNAUTHORIZED);
+    /**
+     * Get all posts by a user
+     * @param userId - The ID of the user
+     * @returns An array of posts by the user
+     */
+    async findByUser(userId: string): Promise<PublicacionResponseDto[]> {
+        const posts = await this.publicacionesModel.find({ userId }).exec();
+        return posts.map(post => PublicacionResponseDto.fromModel(post));
     }
 
-    await this.publicacionesRepository.update(id, updatePublicacionesDto);
-
-    const updatePost = await this.findOne(id)
-
-    return updatePost;
-  }
-
-  /**
-   * remove
-   * @param id id post
-   * @param userId user id
-   * @returns post deleted
-   * @throws {HttpException} if the post doesn't exists, if the user isn´t authorized, internal error.
-   */
-  async remove(id: number, userId: number) {
-    const post = await this.findOne(id)
-
-    if (!post) {
-      throw new HttpException("The post doesn't exists", HttpStatus.NOT_FOUND);
+    /**
+     * Update a post by its ID
+     * @param id - The ID of the post
+     * @param data - The data to update the post
+     * @returns The updated post, or null if not found
+     */
+    async update(id: string, data: UpdatePublicacionDto): Promise<PublicacionResponseDto | null> {
+        const post = await this.publicacionesModel.findByIdAndUpdate(id, data, { new: true }).exec();
+        return post ? PublicacionResponseDto.fromModel(post) : null;
     }
 
-    if (post.user.id !== userId) {
-      throw new HttpException("You don't have authorization for this action.", HttpStatus.UNAUTHORIZED);
+    /**
+     * Remove a post by its ID
+     * @param id - The ID of the post
+     * @returns The removed post, or null if not found
+     */
+    async remove(id: string): Promise<PublicacionResponseDto | null> {
+        const post = await this.publicacionesModel.findByIdAndDelete(id).exec();
+        return post ? PublicacionResponseDto.fromModel(post) : null;
     }
-
-    await this.publicacionesRepository.delete(id);
-
-    return post;
-  }
 }
