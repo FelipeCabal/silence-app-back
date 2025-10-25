@@ -1,47 +1,70 @@
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ComentariosService } from './comentarios.service';
-import { CreateComentariosDto } from './dto/create-comentarios.dto';
-import { IsPrivate } from 'src/auth/decorators/isPrivate.decorator';
+import { CreateComentarioDto } from './dto/requests/create-comentario.dto';
+import { UpdateComentarioDto } from './dto/requests/update-comentario.dto';
 
 @Controller('posts/comments')
-@ApiTags('comments')
-@UseGuards(AuthGuard)
-
+@ApiTags('Comentarios')
 export class ComentariosController {
-    constructor(
-        private readonly comentariosService: ComentariosService
-    ) { }
+  constructor(private readonly comentariosService: ComentariosService) {}
 
-    @Post(':post')
-    @ApiOperation({ summary: 'Create a new comment' })
-    create(
-        @Body() createComentariosDto: CreateComentariosDto,
-        @Param('post') post: string,
-        @Request() req
-    ) {
-        const userId = req.user;
-        return this.comentariosService.create(createComentariosDto, +post, userId.id)
-    }
+  @Post(':postId')
+  @ApiParam({ name: 'postId', description: 'ID of the post to comment on' })
+  @ApiOperation({ summary: 'Create a new comment on a post' })
+  async createComment(
+    @Param('postId') postId: string,
+    @Body() body: CreateComentarioDto,
+  ) {
+    const comentario = await this.comentariosService.createComentario(
+      postId,
+      body,
+    );
 
-    @Get(':postId')
-    @ApiOperation({ summary: 'Get all comments from a post' })
-    async findAll(
-        @Param('postId') postId: string,
-    ) {
-        return this.comentariosService.findAllComments(+postId)
-    }
+    if (!comentario)
+      throw new NotFoundException('Post not found with id:' + postId);
 
-    @Delete(':post/:commentId')
-    @IsPrivate()
-    @ApiOperation({ summary: 'Delete a comment' })
-    async delete(
-        @Param('commentId') commentId: string,
-        @Param('post') post: number,
-        @Request() req: any
-    ) {
-        const usuario = req.user
-        return this.comentariosService.deleteComment(commentId, usuario.id, post)
-    }
+    return comentario;
+  }
+
+  @Patch(':commentId')
+  @ApiParam({ name: 'commentId', description: 'ID of the comment to update' })
+  @ApiOperation({ summary: 'Update an existing comment' })
+  async updateComment(
+    @Param('commentId') commentId: string,
+    @Body() body: UpdateComentarioDto,
+  ) {
+    const comentario = await this.comentariosService.updateComentario(
+      commentId,
+      body,
+    );
+
+    if (!comentario)
+      throw new NotFoundException('Comment not found with id:' + commentId);
+
+    return comentario;
+  }
+
+  @Delete(':commentId')
+  @ApiParam({ name: 'commentId', description: 'ID of the comment to delete' })
+  @ApiOperation({ summary: 'Delete a comment' })
+  async deleteComment(@Param('commentId') commentId: string) {
+    const comentario =
+      await this.comentariosService.deleteComentario(commentId);
+
+    if (!comentario)
+      throw new NotFoundException('Comment not found with id: ' + commentId);
+
+    return comentario;
+  }
 }
