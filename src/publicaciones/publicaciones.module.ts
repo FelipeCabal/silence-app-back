@@ -3,30 +3,45 @@ import { PublicacionesController } from './publicaciones.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Publicaciones } from './entities/publicaciones.entity';
 import { MongooseModule } from '@nestjs/mongoose';
-import { comentarioModelSchema, ComentariosSchema } from './comentarios/entities/comentarios.schema';
+import {
+  ComentarioSchema,
+  Comentario,
+} from './comentarios/entities/comentarios.schema';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/services/users.service';
 import { Publicacion, PublicacionSchema } from './entities/publicacion.schema';
 import { PublicacionesService } from './publicaciones.service';
-
+import { ComentariosApplicationService } from './comentarios-application.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Publicaciones]),
     MongooseModule.forFeature([
       {
-        name: ComentariosSchema.name,
-        schema: comentarioModelSchema
+        name: Comentario.name,
+        schema: ComentarioSchema,
       },
       {
         name: Publicacion.name,
-        schema: PublicacionSchema
-      }
+        schema: PublicacionSchema,
+      },
     ]),
     UsersModule,
   ],
   controllers: [PublicacionesController],
-  providers: [PublicacionesService, PublicacionesService, UsersService],
-  exports: [TypeOrmModule, MongooseModule, UsersModule, PublicacionesService, PublicacionesService]
+  providers: [
+    PublicacionesService,
+    PublicacionesService,
+    UsersService,
+    ComentariosApplicationService,
+  ],
+  exports: [
+    TypeOrmModule,
+    MongooseModule,
+    UsersModule,
+    PublicacionesService,
+    PublicacionesService,
+    ComentariosApplicationService,
+  ],
 })
-export class PublicacionesModule { }
+export class PublicacionesModule {}
