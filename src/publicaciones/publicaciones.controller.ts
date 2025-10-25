@@ -1,83 +1,125 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Request,
+  NotFoundException,
+} from '@nestjs/common';
 import { PublicacionesService } from './publicaciones.service';
-import { CreatePublicacionesDto } from './dto/create-publicacione.dto';
-import { UpdatePublicacionesDto } from './dto/update-publicacione.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { IsPrivate } from 'src/auth/decorators/isPrivate.decorator';
+import { CreatePublicacionDto } from './dto/requests/create-publicacion.dto';
+import { UpdatePublicacionDto } from './dto/requests/update-publicacion.dto';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PublicacionResponseDto } from './dto/responses/publicacion-response.dto';
 
 @Controller('posts')
-@ApiTags('posts')
-@UseGuards(AuthGuard)
+@ApiTags('Posts')
 export class PublicacionesController {
-  constructor(private readonly publicacionesService: PublicacionesService) { }
+  constructor(private readonly publicacionesService: PublicacionesService) {}
 
   /**
-   * ENDPOINT to create a new post 
+   * ENDPOINT to create a new post
    * @param createPublicacionesDto data to create a new post
    * @returns post newly created
    */
   @Post()
-  @ApiOperation({ summary: "Create a new posts" })
-  create(
-    @Body() createPublicacionesDto: CreatePublicacionesDto,
-    @Request() req: any,
-  ) {
-    const usuario = req.user
-    return this.publicacionesService.create(usuario.id, createPublicacionesDto);
+  @ApiOperation({ summary: 'Create a new post' })
+  @ApiResponse({
+    status: 201,
+    type: PublicacionResponseDto,
+    description: 'The post has been successfully created.',
+  })
+  create(@Body() createPublicacionesDto: CreatePublicacionDto) {
+    return this.publicacionesService.create(createPublicacionesDto);
   }
 
   /**
-   * ENDPOINT to get all posts 
+   * ENDPOINT to get all posts
    * @returns array with all posts
    */
   @Get()
-  @ApiOperation({ summary: "Get all posts" })
-  findAll(
-    @Request() req: any
-  ) {
-    const usuario = req.user
-    return this.publicacionesService.findAll(+usuario.id);
+  @ApiOperation({ summary: 'Get all posts' })
+  @ApiResponse({
+    status: 200,
+    type: [PublicacionResponseDto],
+    description: 'The posts have been successfully retrieved.',
+  })
+  @ApiResponse({ status: 404, description: 'No posts found' })
+  async findAll() {
+    const posts = await this.publicacionesService.findAll();
+
+    if (posts.length === 0) throw new NotFoundException(`No posts found`);
+
+    return posts;
+  }
+
+  /**
+   * ENDPOINT to get all posts
+   * @returns array with all posts
+   */
+  @Get('my')
+  @ApiOperation({ summary: 'Get all user posts' })
+  @ApiResponse({
+    status: 200,
+    type: [PublicacionResponseDto],
+    description: 'The posts have been successfully retrieved.',
+  })
+  @ApiResponse({ status: 404, description: 'No posts found for the user.' })
+  async findByUser(@Request() req: any) {
+    const usuario = req.user;
+    const posts = await this.publicacionesService.findByUser(usuario.id);
+
+    if (posts.length === 0)
+      throw new NotFoundException(
+        `No posts found for user with ID ${usuario.id}`,
+      );
+
+    return posts;
   }
 
   /**
    * ENDPOINT to get one post
-   * @param id from post that is searched 
+   * @param id from post that is searched
    * @returns post searched
    */
   @Get(':id')
-  @ApiOperation({ summary: "Get a post" })
-  findOne(@Param('id') id: string) {
-    return this.publicacionesService.findOne(+id);
-  }
+  @ApiOperation({ summary: 'Get a post' })
+  @ApiParam({ name: 'id', description: 'ID of the post to retrieve' })
+  async findOne(@Param('id') id: string) {
+    const post = await this.publicacionesService.findOne(id);
 
-  /**
-   * ENDPOINT to get all post from an user 
-   * @param user id from user
-   * @returns all an user's post
-   */
-  @Get('user/:user')
-  @ApiOperation({ summary: "Get all an user's posts" })
-  findByUser(@Param('user') user: string) {
-    return this.publicacionesService.findByUser(+user);
+    if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
+
+    return post;
   }
 
   /**
    * ENDPOINT to update a post
-   * @param id from post 
+   * @param id from post
    * @param updatePublicacionesDto update data
-   * @returns post updated 
+   * @returns post updated
    */
   @Patch(':id')
-  @IsPrivate()
-  @ApiOperation({ summary: "Update a posts" })
-  update(
+  @ApiParam({ name: 'id', description: 'ID of the post to update' })
+  @ApiOperation({ summary: 'Update a post' })
+  @ApiResponse({
+    status: 200,
+    type: PublicacionResponseDto,
+    description: 'The post has been successfully updated.',
+  })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  async update(
     @Param('id') id: string,
-    @Body() updatePublicacionesDto: UpdatePublicacionesDto,
-    @Request() req: any
+    @Body() updatePublicacionesDto: UpdatePublicacionDto,
   ) {
-    const usuario = req.user
-    return this.publicacionesService.update(+id, updatePublicacionesDto, usuario.id);
+    const post = await this.publicacionesService.update(id, updatePublicacionesDto);
+
+    if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
+
+    return post;
   }
 
   /**
@@ -86,13 +128,13 @@ export class PublicacionesController {
    * @returns post deleted
    */
   @Delete(':id')
-  @IsPrivate()
-  @ApiOperation({ summary: "Delete a posts" })
-  remove(
-    @Param('id') id: string,
-    @Request() req: any
-  ) {
-    const usuario = req.user
-    return this.publicacionesService.remove(+id, usuario.id);
+  @ApiParam({ name: 'id', description: 'ID of the post to delete' })
+  @ApiOperation({ summary: 'Delete a post' })
+  async remove(@Param('id') id: string) {
+    const post = await this.publicacionesService.remove(id);
+
+    if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
+
+    return post;
   }
 }
