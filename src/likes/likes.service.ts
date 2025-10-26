@@ -1,113 +1,68 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Like } from './like.entity';
 import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
-import { Repository } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class LikesService {
 
-  constructor(
-    @InjectRepository(Like)
-    private readonly likeRepository: Repository<Like>,
-    @InjectRepository(Publicaciones)
-    private readonly publicacionesRepository: Repository<Publicaciones>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>
-  ) { }
+	constructor(
+		@InjectModel(Publicaciones.name)
+		private readonly publicacionesModel: Model<Publicaciones>,
+		@InjectModel(User.name)
+		private readonly userModel: Model<User>
+	) { }
 
-  async manejoLikes(userId: number, publicacionesId: number) {
-    const usuario = await this.userRepository.findOne({ where: { id: userId } });
-    const publicaciones = await this.publicacionesRepository.findOne({ where: { id: publicacionesId.toString() } });
+	async likePost(postId: string, userId: string) {
+		const post = await this.publicacionesModel.findById(postId);
+		const user = await this.userModel.findById(userId);
 
-    if (!usuario || !publicaciones) {
-      throw new HttpException("user or post not found", HttpStatus.NOT_FOUND);
-    }
+		if (!post) {
+			throw new HttpException('post not found', HttpStatus.NOT_FOUND);
+		}
 
-    const existeLike = await this.likeRepository.findOne({
-      where: { user: { id: userId }, publicaciones: { id: publicacionesId.toString() } }
-    });
+		if (!user) {
+			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
+		}
 
-    if (existeLike) {
-      await this.likeRepository.remove(existeLike);
-      return 'se eliminó el like del post';
-    }
-    else {
-      const newLike = this.likeRepository.create({
-        user: { id: userId },
-        publicaciones: {
-          id: publicacionesId.toString()
-        }
-      });
+		user.likes.push({ postId } as any);
+		await user.save();
 
-      await this.likeRepository.save(newLike);
+		return post;
+	}
 
-      return newLike;
-    }
-  }
+	async unlikePost(postId: string, userId: number) {
+		const post = await this.publicacionesModel.findById(postId);
+		const user = await this.userModel.findById(userId);
 
-  async findAllLikes(postId: number) {
+		if (!post) {
+			throw new HttpException('post not found', HttpStatus.NOT_FOUND);
+		}
 
-    const post = await this.publicacionesRepository.findOne({
-      where: { id: postId.toString() }
-    })
+		if (!user) {
+			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
+		}
 
-    if (!post) {
-      throw new HttpException("post not found", HttpStatus.NOT_FOUND);
-    }
+		user.likes = user.likes.filter((like: any) => like.postId !== postId);
+		await user.save();
 
-    const likes = await this.likeRepository
-      .createQueryBuilder('like')
-      .leftJoinAndSelect('like.user', 'users')
-      .where('like.publicacionesId = :postId', { postId })
-      .getMany()
+		return post;
+	}
 
-    if (likes.length === 0) {
-      throw new HttpException("likes not found", HttpStatus.NOT_FOUND);
-    }
+	async findLikesByUser(userId: string) {
+		const user = await this.userModel
+			.findOne({ _id: userId })
+			.populate('likes.postId');
 
-    return likes;
-  }
+		if (!user) {
+			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
+		}
 
-  async findOneLike(likeId: number) {
-    const like = await this.likeRepository.findOne({
-      where: { id: likeId }
-    })
+		if (!user.likes || user.likes.length === 0) {
+			throw new HttpException('este usuario no tiene interacciones', HttpStatus.NOT_FOUND);
+		}
 
-    if (!like) {
-      throw new HttpException("like not found", HttpStatus.NOT_FOUND);
-    }
-
-    return like;
-  }
-
-  async findLikesByUser(userId: number, requesterId: number) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      throw new HttpException('user not found', HttpStatus.NOT_FOUND);
-    }
-
-    let likes = []
-
-    if (user.showLikes === false) {
-      if (userId !== requesterId) {
-        return "No hay actividad para mostrar"
-      }
-    }
-    else {
-
-      likes = await this.publicacionesRepository
-        .createQueryBuilder('post')
-        .innerJoin('post.likes', 'like')
-        .leftJoinAndSelect('post.user', 'user')
-        .where("like.userId = :userId", { userId })
-        .getMany();
-
-      return likes;
-    }
-  }
+	 	return user.likes;
+	}
 }

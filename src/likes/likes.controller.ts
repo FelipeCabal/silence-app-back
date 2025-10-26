@@ -12,35 +12,19 @@ export class LikesController {
   @Post(':postId')
   @ApiOperation({ summary: "Toggle like" })
   async manejoLikes(
-    @Param('postId') postId: number,
+    @Param('postId') postId: string,
     @Req() req: any
   ) {
     const userId = req.user;
-    return this.likesService.manejoLikes(userId.id, postId);
-  }
-
-  @Get(':postId')
-  @ApiOperation({ summary: "get all posts likes" })
-  async findAllLikes(
-    @Param('postId') postId: number
-  ) {
-    return this.likesService.findAllLikes(postId);
-  }
-
-  @Get('like/:likeId')
-  @ApiOperation({ summary: "get one like" })
-  async findOneLike(
-    @Param('likeId') likeId: number
-  ) {
-    return this.likesService.findOneLike(likeId);
+    return this.likesService.likePost(postId, userId);
   }
 
   @Get('user/:userId')
   async findLikesByUser(
-    @Param('userId') userId: number,
+    @Param('userId') userId: string,
     @Req() req: any
   ) {
     const requesterId = req.user.id;
-    return this.likesService.findLikesByUser(userId, requesterId)
+    return this.likesService.findLikesByUser(userId)
   }
 }
