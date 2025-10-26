@@ -11,6 +11,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
 import { ComentariosModule } from './publicaciones/comentarios/comentarios.module';
 import { LikesModule } from './likes/likes.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LikesModule } from './likes/likes.module';
     MongooseModule.forRoot(mongooseConfigUri),
     PublicacionesModule,
     ChatsModule,
+    RedisModule,
     UsersModule,
     AuthModule,
     ComentariosModule,
