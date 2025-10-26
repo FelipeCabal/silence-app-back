@@ -7,9 +7,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     constructor() {
         this.client = new Redis({
-            host: 'relieved-snapper-29465.upstash.io',
+            host: process.env.REDIS_HOST,
             port: 6379,
-            password: 'AXMZAAIncDI1YWI0ZDU1NjdiMWM0NDI0OTU3ZjM1ZGM0NGIyNmY3Y3AyMjk0NjU',
+            password: process.env.REDIS_PASSWORD,
             tls: {},
             lazyConnect: true,
         });
