@@ -1,26 +1,19 @@
 import { Module } from '@nestjs/common';
-import { PublicacionesController } from './publicaciones.controller';
+import { PublicacionesController } from './controllers/publicaciones.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Publicaciones } from './entities/publicaciones.entity';
 import { MongooseModule } from '@nestjs/mongoose';
-import {
-  ComentarioSchema,
-  Comentario,
-} from './comentarios/entities/comentarios.schema';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/services/users.service';
 import { Publicacion, PublicacionSchema } from './entities/publicacion.schema';
-import { PublicacionesService } from './publicaciones.service';
-import { ComentariosApplicationService } from './comentarios-application.service';
+import { PublicacionesService } from './services/publicaciones.service';
+import { ComentariosController } from './controllers/comentarios.controller';
+import { ComentariosService } from './services/comentarios.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Publicaciones]),
     MongooseModule.forFeature([
-      {
-        name: Comentario.name,
-        schema: ComentarioSchema,
-      },
       {
         name: Publicacion.name,
         schema: PublicacionSchema,
@@ -28,12 +21,12 @@ import { ComentariosApplicationService } from './comentarios-application.service
     ]),
     UsersModule,
   ],
-  controllers: [PublicacionesController],
+  controllers: [ComentariosController, PublicacionesController],
   providers: [
+    ComentariosService,
     PublicacionesService,
     PublicacionesService,
     UsersService,
-    ComentariosApplicationService,
   ],
   exports: [
     TypeOrmModule,
@@ -41,7 +34,6 @@ import { ComentariosApplicationService } from './comentarios-application.service
     UsersModule,
     PublicacionesService,
     PublicacionesService,
-    ComentariosApplicationService,
   ],
 })
 export class PublicacionesModule {}

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Publicacion } from 'src/publicaciones/entities/publicacion.schema';
+import { ComentarioResponseDto } from './comentario-reponse.dto';
 
 export class PublicacionResponseDto {
   @ApiProperty({
@@ -25,7 +26,7 @@ export class PublicacionResponseDto {
     description: 'Comentarios de la publicación',
     example: [],
   })
-  comentarios: any[];
+  comentarios: ComentarioResponseDto[];
 
   @ApiProperty({
     description: 'Cantidad de likes en la publicación',
@@ -62,7 +63,9 @@ export class PublicacionResponseDto {
     dto.id = model.id ?? model._id?.toString();
     dto.description = model.description;
     dto.imagen = model.imagen ?? null;
-    dto.comentarios = model.comentarios ?? [];
+    dto.comentarios = (model.comentarios ?? []).map((c) =>
+      ComentarioResponseDto.fromModel(c),
+    );
     dto.cantLikes = model.cantLikes ?? 0;
     dto.cantComentarios = model.cantComentarios ?? 0;
     dto.esAnonimo = model.esAnonimo;

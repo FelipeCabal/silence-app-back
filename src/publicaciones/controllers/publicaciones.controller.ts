@@ -9,11 +9,11 @@ import {
   Request,
   NotFoundException,
 } from '@nestjs/common';
-import { PublicacionesService } from './publicaciones.service';
-import { CreatePublicacionDto } from './dto/requests/create-publicacion.dto';
-import { UpdatePublicacionDto } from './dto/requests/update-publicacion.dto';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { PublicacionResponseDto } from './dto/responses/publicacion-response.dto';
+import { PublicacionesService } from '../services/publicaciones.service';
+import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
+import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
+import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
 
 @Controller('posts')
 @ApiTags('Posts')
@@ -115,7 +115,10 @@ export class PublicacionesController {
     @Param('id') id: string,
     @Body() updatePublicacionesDto: UpdatePublicacionDto,
   ) {
-    const post = await this.publicacionesService.update(id, updatePublicacionesDto);
+    const post = await this.publicacionesService.update(
+      id,
+      updatePublicacionesDto,
+    );
 
     if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
 
