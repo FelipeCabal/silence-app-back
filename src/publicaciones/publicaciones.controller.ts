@@ -37,7 +37,7 @@ export class PublicacionesController {
     @Request() req: any
   ) {
     const usuario = req.user
-    return this.publicacionesService.findAll(+usuario.id);
+    return this.publicacionesService.findAll(usuario.id);
   }
 
   /**

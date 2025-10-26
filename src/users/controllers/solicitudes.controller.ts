@@ -15,7 +15,7 @@ export class SolicitudesController {
     @Post('request/:userRecibeId')
     @ApiOperation({ summary: 'Send friends request' })
     async FriendRequestSent(
-        @Param('userRecibeId') userRecibeId: number,
+        @Param('userRecibeId') userRecibeId: String,
         @Request() req: any
     ) {
         const userEnviaId = req.user.id

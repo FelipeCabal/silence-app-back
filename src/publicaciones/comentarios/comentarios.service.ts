@@ -22,7 +22,7 @@ export class ComentariosService {
      * @param createComentarioDto 
      * @returns 
      */
-    async create(createComentarioDto: CreateComentariosDto, postId: number, usuarioId: number) {
+    async create(createComentarioDto: CreateComentariosDto, postId: number, usuarioId: String) {
         const postToComment = await this.publicacionesService.findOne(postId);
 
         if (!postToComment) {
@@ -66,7 +66,7 @@ export class ComentariosService {
         }));
 
         return comentario;
-        
+
     }
 
     /**
@@ -75,7 +75,7 @@ export class ComentariosService {
      * @param userId 
      * @returns 
      */
-    async deleteComment(commentId: string, userId: number, postId: number) {
+    async deleteComment(commentId: string, userId: String, postId: number) {
         const comment = await this.comentariosModel.findById(commentId);
         if (!comment) {
             throw new HttpException("comment not found", HttpStatus.NOT_FOUND);

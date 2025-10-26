@@ -17,7 +17,7 @@ export class GroupInvitationsService {
         private readonly groupService: GroupChatsService,
     ) { }
 
-    async createInvitation(senderId: number, receiverId: number, groupId: number): Promise<InvitacionesGrupos> {
+    async createInvitation(senderId: String, receiverId: String, groupId: number): Promise<InvitacionesGrupos> {
         const sender = await this.usersService.findOneUser(senderId);
         const receiver = await this.usersService.findOneUser(receiverId);
 
@@ -48,7 +48,7 @@ export class GroupInvitationsService {
         return await this.groupInvitationRepository.save(newInvitation);
     }
 
-    async acceptInvitation(invitationId: number, userId: number): Promise<void> {
+    async acceptInvitation(invitationId: number, userId: String): Promise<void> {
         const invitation = await this.groupInvitationRepository.findOne({
             where: { id: invitationId },
             relations: ['grupo', 'user'],
@@ -76,7 +76,7 @@ export class GroupInvitationsService {
         }
     }
 
-    async rejectInvitation(invitationId: number, userId: number): Promise<void> {
+    async rejectInvitation(invitationId: number, userId: String): Promise<void> {
         const invitation = await this.groupInvitationRepository.findOne({
             where: { id: invitationId },
             relations: ['user']
@@ -93,7 +93,7 @@ export class GroupInvitationsService {
         await this.groupInvitationRepository.remove(invitation);
     }
 
-    async findUserInvitations(userId: number): Promise<InvitacionesGrupos[]> {
+    async findUserInvitations(userId: String): Promise<InvitacionesGrupos[]> {
         const user = await this.usersService.findOneUser(userId)
         return await this.groupInvitationRepository.find({
             where: { user: user },

@@ -18,7 +18,7 @@ export class SolicitudesAmistadService {
         private readonly solicitudRepository: Repository<SolicitudAmistad>
     ) { }
 
-    async sendFriendRequest(userSendId: number, userReceiveId: number) {
+    async sendFriendRequest(userSendId: String, userReceiveId: String) {
         const userSend = await this.usersService.findOneUser(userSendId);
         const userReceive = await this.usersService.findOneUser(userReceiveId);
 
@@ -52,7 +52,7 @@ export class SolicitudesAmistadService {
         return friendRequest;
     }
 
-    async findAllReceiveRequest(userId: number) {
+    async findAllReceiveRequest(userId: String) {
         const user = await this.usersService.findOneUser(userId);
 
         if (!user) {
@@ -111,7 +111,7 @@ export class SolicitudesAmistadService {
         throw new HttpException("invalid action", HttpStatus.BAD_REQUEST);
     }
 
-    async deleteRequest(requestId: number, userId: number) {
+    async deleteRequest(requestId: number, userId: String) {
         const user = await this.usersService.findOneUser(userId);
 
         if (!user) {
@@ -144,7 +144,7 @@ export class SolicitudesAmistadService {
 
         return request;
     }
-    async findUserRequests(userId: number) {
+    async findUserRequests(userId: String) {
         const user = await this.usersService.findOneUser(userId);
 
         if (!user) {

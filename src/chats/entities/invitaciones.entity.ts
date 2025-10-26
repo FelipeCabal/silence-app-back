@@ -1,15 +1,15 @@
-import { User } from 'src/users/entities/user.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Grupos } from './chats.entity';
 import { Status } from 'src/config/enums/status.enum';
+import { userSchema } from 'src/users/userSchema/users.schema';
 
 @Entity('invitacionesGrupos')
 export class InvitacionesGrupos {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => User, (user) => user.grupos, { onDelete: 'CASCADE' })
-    user: User;
+    @ManyToOne(() => userSchema, (user) => user.grupos, { onDelete: 'CASCADE' })
+    user: userSchema;
 
     @ManyToOne(() => Grupos, (grupo) => grupo.invitaciones, { onDelete: 'CASCADE', eager: true })
     grupo: Grupos;

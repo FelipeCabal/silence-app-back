@@ -42,7 +42,7 @@ export class UsersService {
    * @param userQueries 
    * @returns lista de usuarios que cumplen con los criterios de búsqueda
    */
-  async findAllUsers(userId: string, userQueries: UserQueries): Promise<userSchema[]> {
+  async findAllUsers(userId: String, userQueries: UserQueries): Promise<userSchema[]> {
     let query: any = {};
 
     // Filtro por nombre o email
@@ -75,7 +75,7 @@ export class UsersService {
 
 
 
-  async findAllFriends(userId: string) {
+  async findAllFriends(userId: String) {
     //
   }
 
@@ -84,7 +84,7 @@ export class UsersService {
    * @param id 
    * @returns Usuario
    */
-  async findOneUser(id: string) {
+  async findOneUser(id: String) {
     const user = await this.userModel.findById(id).select('-password').exec();
 
     if (!user) {
@@ -100,7 +100,7 @@ export class UsersService {
    * @param updateUser 
    * @returns usuario actualizado.
    */
-  async update(id: string, updateUser: UpdateUserDto) {
+  async update(id: String, updateUser: UpdateUserDto) {
     if (updateUser.password) {
       updateUser.password = await bcrypt.hashSync(updateUser.password, SALT_ROUNDS);
     }
@@ -120,13 +120,28 @@ export class UsersService {
    * @param id 
    * @returns usuario eliminado
    */
-  async remove(id: string) {
+  async remove(id: String) {
     const userDelete = await this.userModel.findByIdAndDelete(id);
 
     if (!userDelete) {
       throw new HttpException("User can't be delete", HttpStatus.CONFLICT)
     }
     return userDelete;
+  }
+
+  /**
+   * Encuentra un usuario por su Email
+   * @param email 
+   * @returns user
+   */
+  async findByEmail(email: String) {
+    const user = await this.userModel.findOne({ email });
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    return user;
   }
 
 }

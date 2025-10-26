@@ -43,7 +43,7 @@ export class PrivateChatsService {
         }
     }
 
-    async findAllUserChats(userId: number, ChatQueries: ComunityAndGroupQueries): Promise<any[]> {
+    async findAllUserChats(userId: String, ChatQueries: ComunityAndGroupQueries): Promise<any[]> {
         const friendships = await this.usersServices.findAllFriends(userId);
 
         if (!friendships || friendships.length === 0) {

@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
 import { Role } from 'src/config/enums/roles.enum';
 import { Comunidades } from './chats.entity';
+import { userSchema } from 'src/users/userSchema/users.schema';
 
 @Entity('miembros_comunidades')
 export class MiembrosComunidades {
@@ -11,8 +11,8 @@ export class MiembrosComunidades {
     @ManyToOne(() => Comunidades, (comunidad) => comunidad.miembros)
     comunidad: Comunidades;
 
-    @ManyToOne(() => User, (user) => user.comunidades)
-    usuario: User;
+    @ManyToOne(() => userSchema, (user) => user.comunidades)
+    usuario: userSchema;
 
     @Column({
         type: 'enum',

@@ -7,6 +7,7 @@ import { createGrupoDto } from '../dto/GruposDto/create-grupos.dto';
 import { updateGruposDto } from '../dto/GruposDto/update-grupos.dto';
 import { UsersService } from 'src/users/services/users.service';
 import { ComunityAndGroupQueries } from '../dto/queries/comunities-queries.dto';
+import { userSchema } from 'src/users/userSchema/users.schema';
 
 @Injectable()
 export class GroupChatsService {
@@ -17,7 +18,7 @@ export class GroupChatsService {
         private readonly usersServices: UsersService,
     ) { }
 
-    async create(createChatDto: createGrupoDto, userId: number): Promise<Grupos> {
+    async create(createChatDto: createGrupoDto, userId: String): Promise<Grupos> {
         const newGroup = this.groupRepository.create(createChatDto);
         const user = await this.usersServices.findOneUser(userId)
 
@@ -31,7 +32,7 @@ export class GroupChatsService {
         return newGroup
     }
 
-    async findAllGroups(userId: number, GroupQueries: ComunityAndGroupQueries): Promise<Grupos[]> {
+    async findAllGroups(userId: String, GroupQueries: ComunityAndGroupQueries): Promise<Grupos[]> {
         const user = await this.usersServices.findOneUser(userId);
 
         if (!user) {
@@ -74,7 +75,7 @@ export class GroupChatsService {
         return group;
     }
 
-    async addUserToGroup(groupId: number, user: User): Promise<Grupos> {
+    async addUserToGroup(groupId: number, user: userSchema): Promise<Grupos> {
         const group = await this.findGroupById(groupId);
 
         if (group.miembros.some((miembro) => miembro.id === user.id)) {
@@ -85,7 +86,7 @@ export class GroupChatsService {
         return await this.groupRepository.save(group);
     }
 
-    async removeUserFromGroup(groupId: number, userId: number): Promise<Grupos> {
+    async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {
         const group = await this.findGroupById(groupId);
         const user = group.miembros.find((miembro) => miembro.id === userId);
 

@@ -66,7 +66,7 @@ export class MessagesService {
         }));
     }
 
-    async ClearChat(chatId: number, userId: number, ChatType: string): Promise<{ deletedCount: number }> {
+    async ClearChat(chatId: number, userId: String, ChatType: string): Promise<{ deletedCount: number }> {
 
         if (ChatType === 'private') {
             const chat = await this.privateChatsService.findOne(chatId);

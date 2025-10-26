@@ -16,5 +16,5 @@ export class CreateMessageDto {
 
     @IsNumber()
     @IsNotEmpty()
-    usuarioId: number; // Asegúrate de que esta propiedad esté aquí
+    usuarioId: String; // Asegúrate de que esta propiedad esté aquí
 }

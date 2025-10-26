@@ -52,7 +52,7 @@ export class GroupChatsController {
     @ApiOperation({ summary: "Delete an user from group chat" })
     async removeUserFromGroup(
         @Param('groupId', ParseIntPipe) groupId: number,
-        @Param('userId', ParseIntPipe) userId: number,
+        @Param('userId') userId: String,
     ): Promise<Grupos> {
         return await this.groupChatsService.removeUserFromGroup(groupId, userId);
     }

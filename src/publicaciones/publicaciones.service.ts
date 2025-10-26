@@ -24,7 +24,7 @@ export class PublicacionesService {
    * @param createPublicacionesDto data to create a new post
    * @returns post newly created 
    */
-  async create(userId: number, createPublicacionesDto: CreatePublicacionesDto) {
+  async create(userId: String, createPublicacionesDto: CreatePublicacionesDto) {
     if (createPublicacionesDto.esAnonimo === true) {
       const newPost = this.publicacionesRepository.create(createPublicacionesDto);
 
@@ -42,7 +42,7 @@ export class PublicacionesService {
    * @param userId logged user
    * @returns all posts
    */
-  async findAll(userId: number) {
+  async findAll(userId: String) {
     const friends = await this.usersService.findAllFriends(userId);
 
     const friendsIds = friends.map((friend => friend.user.id));

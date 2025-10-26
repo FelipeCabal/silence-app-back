@@ -19,7 +19,7 @@ export class ComunidadesService {
         private readonly usersService: UsersService,
     ) { }
 
-    async create(createCommunityDto: Partial<Comunidades>, ownerId: number): Promise<Comunidades> {
+    async create(createCommunityDto: Partial<Comunidades>, ownerId: string): Promise<Comunidades> {
         const owner = await this.usersService.findOneUser(ownerId)
 
         const newCommunity = this.comunidadesRepository.create({
@@ -92,7 +92,7 @@ export class ComunidadesService {
     }
 
 
-    async addMember(communityId: number, userId: number): Promise<void> {
+    async addMember(communityId: number, userId: String): Promise<void> {
         const comunidad = await this.findCommunityById(communityId);
         const user = await this.usersService.findOneUser(userId)
 

@@ -7,7 +7,7 @@ import { Types } from "mongoose";
 export class comentariosSchema {
 
     @Prop({ required: true })
-    usuarioId: number
+    usuarioId: String
 
     @Prop({
         trim: true

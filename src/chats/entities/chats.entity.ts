@@ -1,8 +1,8 @@
-import { User } from "src/users/entities/user.entity";
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryColumnCannotBeNullableError, PrimaryGeneratedColumn } from "typeorm";
 import { InvitacionesGrupos } from "./invitaciones.entity";
 import { SolicitudAmistad } from "src/users/entities/solicitud.entity";
 import { MiembrosComunidades } from "./miembrosComunidad.entity";
+import { userSchema } from "src/users/userSchema/users.schema";
 
 @Entity('chatsPrivados')
 export class ChatPrivado {
@@ -31,9 +31,9 @@ export class Grupos {
     @Column({ nullable: true })
     imagen: string
 
-    @ManyToMany(() => User, (user) => user.grupos, { cascade: true })
+    @ManyToMany(() => userSchema, (user) => user.grupos, { cascade: true })
     @JoinTable()
-    miembros: User[];
+    miembros: userSchema[];
 
     @OneToMany(() => InvitacionesGrupos, (invitacion) => invitacion.grupo, { cascade: true })
     invitaciones: InvitacionesGrupos[]
