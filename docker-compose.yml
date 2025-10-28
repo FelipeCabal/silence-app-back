@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: silenceApp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-silenceApp}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: silenceApp-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Postgres connection for TypeORM
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      # If you prefer a single DATABASE_URL, set it and remove the above
+      # DATABASE_URL: ${DATABASE_URL}
+
+      # MongoDB connection (map your existing Atlas URI; service not created here)
+      MONGO_URL: ${MONGO_URI}
+
+      # App
+      PORT: ${PORT:-3000}
+      ENVIRONMENT: ${ENVIROMENT:-development}
+    ports:
+      - "3000:3000"
+    # If you want to pass the whole .env, uncomment the next line
+    # env_file:
+    #   - .env
+
+volumes:
+  pgdata:
