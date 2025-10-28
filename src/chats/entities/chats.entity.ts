@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne,
 import { InvitacionesGrupos } from "./invitaciones.entity";
 import { SolicitudAmistad } from "src/users/entities/solicitud.entity";
 import { MiembrosComunidades } from "./miembrosComunidad.entity";
-import { userSchema } from "src/users/userSchema/users.schema";
+import { userSchema } from "src/users/entities/users.schema";
 
 @Entity('chatsPrivados')
 export class ChatPrivado {

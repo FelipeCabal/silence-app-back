@@ -2,17 +2,18 @@ import { Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typ
 import { Status } from "src/config/enums/status.enum";
 import { ChatPrivado } from "src/chats/entities/chats.entity";
 import { userSchema } from "./users.schema";
+import { User } from "./user.entity";
 
 @Entity('solicitudAmistad')
 export class SolicitudAmistad {
     @PrimaryGeneratedColumn()
     id: number
 
-    @ManyToOne(() => userSchema, user => user.enviaSolicitudAmistad)
-    userEnvia: userSchema
+    @ManyToOne(() => User, user => user.enviaSolicitudAmistad)
+    userEnvia: User
 
-    @ManyToOne(() => userSchema, user => user.recibeSolicitudAmistad)
-    userRecibe: userSchema
+    @ManyToOne(() => User, user => user.recibeSolicitudAmistad)
+    userRecibe: User
 
     @Column({ default: 'P' })
     status: Status

@@ -39,29 +39,29 @@ export class GroupChatsController {
         return this.groupChatsService.findGroupById(id);
     }
 
-    @Patch(':id')
-    @ApiOperation({ summary: "Update a group chat" })
-    async updateGroup(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() updateChatDto: updateGruposDto,
-    ): Promise<Grupos> {
-        return await this.groupChatsService.update(id, updateChatDto);
-    }
-
-    @Delete(':groupId/usuarios/:userId')
-    @ApiOperation({ summary: "Delete an user from group chat" })
-    async removeUserFromGroup(
-        @Param('groupId', ParseIntPipe) groupId: number,
-        @Param('userId') userId: String,
-    ): Promise<Grupos> {
-        return await this.groupChatsService.removeUserFromGroup(groupId, userId);
-    }
-
-
-    @Delete(':id')
-    @ApiOperation({ summary: "Delete a group chat" })
-    async removeGroup(@Param('id', ParseIntPipe) id: number): Promise<void> {
-        await this.groupChatsService.remove(id);
-    }
+    /* @Patch(':id')
+     @ApiOperation({ summary: "Update a group chat" })
+     async updateGroup(
+         @Param('id', ParseIntPipe) id: number,
+         @Body() updateChatDto: updateGruposDto,
+     ): Promise<Grupos> {
+         return await this.groupChatsService.update(id, updateChatDto);
+     }
+ 
+     @Delete(':groupId/usuarios/:userId')
+     @ApiOperation({ summary: "Delete an user from group chat" })
+     async removeUserFromGroup(
+         @Param('groupId', ParseIntPipe) groupId: number,
+         @Param('userId') userId: String,
+     ): Promise<Grupos> {
+         return await this.groupChatsService.removeUserFromGroup(groupId, userId);
+     }
+ 
+ 
+     @Delete(':id')
+     @ApiOperation({ summary: "Delete a group chat" })
+     async removeGroup(@Param('id', ParseIntPipe) id: number): Promise<void> {
+         await this.groupChatsService.remove(id);
+     }*/
 
 }

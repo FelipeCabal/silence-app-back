@@ -1,5 +1,5 @@
 import { Like } from "src/likes/like.entity";
-import { userSchema } from "src/users/userSchema/users.schema";
+import { userSchema } from "src/users/entities/users.schema";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('publicaciones')

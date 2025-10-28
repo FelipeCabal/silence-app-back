@@ -22,7 +22,7 @@ export class PrivateChatsService {
 
     ) { }
 
-    async create(amistadId: number): Promise<ChatPrivado> {
+    async create(amistadId: string): Promise<ChatPrivado> {
         try {
             const solicitud = await this.solicitudAmistadServices.findOneReq(amistadId);
 
@@ -43,7 +43,7 @@ export class PrivateChatsService {
         }
     }
 
-    async findAllUserChats(userId: String, ChatQueries: ComunityAndGroupQueries): Promise<any[]> {
+    async findAllUserChats(userId: string, ChatQueries: ComunityAndGroupQueries): Promise<any[]> {
         const friendships = await this.usersServices.findAllFriends(userId);
 
         if (!friendships || friendships.length === 0) {

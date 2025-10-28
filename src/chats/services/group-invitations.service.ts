@@ -17,7 +17,7 @@ export class GroupInvitationsService {
         private readonly groupService: GroupChatsService,
     ) { }
 
-    async createInvitation(senderId: String, receiverId: String, groupId: number): Promise<InvitacionesGrupos> {
+    async createInvitation(senderId: string, receiverId: string, groupId: number): Promise<InvitacionesGrupos> {
         const sender = await this.usersService.findOneUser(senderId);
         const receiver = await this.usersService.findOneUser(receiverId);
 
@@ -76,7 +76,7 @@ export class GroupInvitationsService {
         }
     }
 
-    async rejectInvitation(invitationId: number, userId: String): Promise<void> {
+    async rejectInvitation(invitationId: number, userId: string): Promise<void> {
         const invitation = await this.groupInvitationRepository.findOne({
             where: { id: invitationId },
             relations: ['user']
@@ -93,7 +93,7 @@ export class GroupInvitationsService {
         await this.groupInvitationRepository.remove(invitation);
     }
 
-    async findUserInvitations(userId: String): Promise<InvitacionesGrupos[]> {
+    async findUserInvitations(userId: string): Promise<InvitacionesGrupos[]> {
         const user = await this.usersService.findOneUser(userId)
         return await this.groupInvitationRepository.find({
             where: { user: user },

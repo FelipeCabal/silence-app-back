@@ -7,7 +7,7 @@ import { createGrupoDto } from '../dto/GruposDto/create-grupos.dto';
 import { updateGruposDto } from '../dto/GruposDto/update-grupos.dto';
 import { UsersService } from 'src/users/services/users.service';
 import { ComunityAndGroupQueries } from '../dto/queries/comunities-queries.dto';
-import { userSchema } from 'src/users/userSchema/users.schema';
+import { userSchema } from 'src/users/entities/users.schema';
 
 @Injectable()
 export class GroupChatsService {
@@ -18,7 +18,7 @@ export class GroupChatsService {
         private readonly usersServices: UsersService,
     ) { }
 
-    async create(createChatDto: createGrupoDto, userId: String): Promise<Grupos> {
+    async create(createChatDto: createGrupoDto, userId: string): Promise<Grupos> {
         const newGroup = this.groupRepository.create(createChatDto);
         const user = await this.usersServices.findOneUser(userId)
 
@@ -32,7 +32,7 @@ export class GroupChatsService {
         return newGroup
     }
 
-    async findAllGroups(userId: String, GroupQueries: ComunityAndGroupQueries): Promise<Grupos[]> {
+    async findAllGroups(userId, GroupQueries: ComunityAndGroupQueries) {
         const user = await this.usersServices.findOneUser(userId);
 
         if (!user) {
@@ -86,27 +86,27 @@ export class GroupChatsService {
         return await this.groupRepository.save(group);
     }
 
-    async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {
-        const group = await this.findGroupById(groupId);
-        const user = group.miembros.find((miembro) => miembro.id === userId);
-
-        if (!user) {
-            throw new NotFoundException(`El usuario no está en este grupo.`);
-        }
-
-        group.miembros = group.miembros.filter((miembro) => miembro.id !== userId);
-        return await this.groupRepository.save(group);
-    }
-
-    async update(id: number, updateChatDto: updateGruposDto): Promise<Grupos> {
-        const group = await this.findGroupById(id);
-
-        Object.assign(group, updateChatDto);
-        return await this.groupRepository.save(group);
-    }
-
-    async remove(id: number): Promise<void> {
-        const group = await this.findGroupById(id);
-        await this.groupRepository.remove(group);
-    }
+    /* async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {
+         const group = await this.findGroupById(groupId);
+         const user = group.miembros.find((miembro) => miembro.id === userId);
+ 
+         if (!user) {
+             throw new NotFoundException(`El usuario no está en este grupo.`);
+         }
+ 
+         group.miembros = group.miembros.filter((miembro) => miembro.id !== userId);
+         return await this.groupRepository.save(group);
+     }
+ 
+     async update(id: number, updateChatDto: updateGruposDto): Promise<Grupos> {
+         const group = await this.findGroupById(id);
+ 
+         Object.assign(group, updateChatDto);
+         return await this.groupRepository.save(group);
+     }
+ 
+     async remove(id: number): Promise<void> {
+         const group = await this.findGroupById(id);
+         await this.groupRepository.remove(group);
+     } */
 }

@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Grupos } from './chats.entity';
 import { Status } from 'src/config/enums/status.enum';
-import { userSchema } from 'src/users/userSchema/users.schema';
+import { userSchema } from 'src/users/entities/users.schema';
 
 @Entity('invitacionesGrupos')
 export class InvitacionesGrupos {

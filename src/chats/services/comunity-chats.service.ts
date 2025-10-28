@@ -92,7 +92,7 @@ export class ComunidadesService {
     }
 
 
-    async addMember(communityId: number, userId: String): Promise<void> {
+    async addMember(communityId: number, userId: string): Promise<void> {
         const comunidad = await this.findCommunityById(communityId);
         const user = await this.usersService.findOneUser(userId)
 
