@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Status } from "src/config/enums/status.enum";
 import { ChatPrivado } from "src/chats/entities/chats.entity";
-import { userSchema } from "../userSchema/users.schema";
+import { userSchema } from "./users.schema";
 
 @Entity('solicitudAmistad')
 export class SolicitudAmistad {
