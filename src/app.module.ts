@@ -9,7 +9,6 @@ import { typeOrmConfig, mongooseConfigUri } from './config/data.source';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
-import { ComentariosModule } from './publicaciones/comentarios/comentarios.module';
 import { LikesModule } from './likes/likes.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -25,11 +24,10 @@ import { RedisModule } from './redis/redis.module';
     RedisModule,
     UsersModule,
     AuthModule,
-    ComentariosModule,
-    LikesModule
+    LikesModule,
   ],
-  controllers: [AppController,],
-  providers: [AppService,],
-  exports: [TypeOrmModule, MongooseModule]
+  controllers: [AppController],
+  providers: [AppService],
+  exports: [TypeOrmModule, MongooseModule],
 })
-export class AppModule { }
+export class AppModule {}
