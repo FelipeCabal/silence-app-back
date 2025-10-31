@@ -5,12 +5,12 @@ import { UsersModule } from 'src/users/users.module';
 import { PublicacionesModule } from 'src/publicaciones/publicaciones.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Like } from './like.entity';
-import { PublicacionesService } from 'src/publicaciones/services/publicaciones.service';
-import { UsersService } from 'src/users/services/users.service';
+import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Like]), UsersModule, PublicacionesModule],
+  imports: [TypeOrmModule.forFeature([Like, Publicaciones, User]), UsersModule, PublicacionesModule],
   controllers: [LikesController],
-  providers: [LikesService, PublicacionesService, UsersService],
+  providers: [LikesService],
 })
-export class LikesModule {}
+export class LikesModule { }
