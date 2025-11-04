@@ -77,7 +77,6 @@ export class UsersService {
     return users;
   }
 
-
   async findAllFriends(userId: number): Promise<{ solicitudId: SolicitudAmistad; user: User }[]> {
     const friendsList = await this.userRepository
       .createQueryBuilder('user')
