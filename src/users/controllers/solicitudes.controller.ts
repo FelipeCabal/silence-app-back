@@ -41,6 +41,15 @@ export class SolicitudesController {
         return this.solicitudesAmistadService.findAllReceiveRequest(userId);
     }
 
+    @Get('user/accepted')
+    @ApiOperation({ summary: 'requested accepted' })
+    async acceptedRequest(
+        @Request() req: any
+    ) {
+        const userId = req.user.id
+        return this.solicitudesAmistadService.findAcceptedFriendships(userId);
+    }
+
     @Patch('update/:requestId')
     @ApiOperation({ summary: 'update status from friend request' })
     async acceptRequestStatus(
