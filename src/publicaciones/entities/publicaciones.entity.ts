@@ -1,5 +1,5 @@
 import { Like } from "src/likes/like.entity";
-import { userSchema } from "src/users/entities/users.schema";
+import { User } from "src/users/entities/user.entity";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('publicaciones')
@@ -16,8 +16,8 @@ export class Publicaciones {
     @Column({ default: false })
     esAnonimo: boolean
 
-    @ManyToOne(() => userSchema, (user) => user.publicaciones)
-    user: userSchema
+    @ManyToOne(() => User, (user) => user.publicaciones)
+    user: User
 
     @OneToMany(() => Like, (likes) => likes.publicaciones)
     likes: Like[]

@@ -93,24 +93,24 @@ export class ComunidadesService {
 
 
     async addMember(communityId: number, userId: string): Promise<void> {
-        const comunidad = await this.findCommunityById(communityId);
-        const user = await this.usersService.findOneUser(userId)
-
-        const existingMember = await this.miembrosRepository.findOne({
-            where: { comunidad: { id: communityId }, usuario: { id: userId } },
-        });
-
-        if (existingMember) {
-            throw new ForbiddenException('El usuario ya es miembro de la comunidad.');
-        }
-
-        const newMember = this.miembrosRepository.create({
-            comunidad,
-            usuario: user,
-            rol: Role.Member,
-        });
-
-        await this.miembrosRepository.save(newMember);
+        // const comunidad = await this.findCommunityById(communityId);
+        // const user = await this.usersService.findOneUser(userId)
+        //
+        // const existingMember = await this.miembrosRepository.findOne({
+        //     where: { comunidad: { id: communityId }, usuario: { id: userId } },
+        // });
+        //
+        // if (existingMember) {
+        //     throw new ForbiddenException('El usuario ya es miembro de la comunidad.');
+        // }
+        //
+        // const newMember = this.miembrosRepository.create({
+        //     comunidad,
+        //     usuario: user,
+        //     rol: Role.Member,
+        // });
+        //
+        // await this.miembrosRepository.save(newMember);
     }
 
     async removeMember(communityId: number, userId: number, executorId: number): Promise<void> {

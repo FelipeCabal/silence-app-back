@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document } from "mongoose";
 
 @Schema({ collection: 'users', timestamps: true })
-export class userSchema extends Document {
+export class UserSchema extends Document {
 
     @Prop({ required: true })
     nombre: string;
@@ -25,7 +25,7 @@ export class userSchema extends Document {
     @Prop()
     pais: string;
 
-    @Prop()
+    @Prop({ default: null })
     imagen?: string;
 
     @Prop({ default: true })
@@ -64,11 +64,12 @@ export class userSchema extends Document {
 
 
     @Prop({
-        type: {
-            enviadas: [{ to: String, estado: String, fecha: Date }],
-            recibidas: [{ from: String, estado: String, fecha: Date }],
-        },
-        default: { enviadas: [], recibidas: [] },
+        type: [{
+            _id: false,
+            enviadas: [{ _id: String, to: String, estado: String, fecha: Date }],
+            recibidas: [{ _id: String, from: String, estado: String, fecha: Date }],
+        }],
+        default: [{ enviadas: [], recibidas: [] }],
     })
     solicitudesAmistad: Record<string, any>;
 
@@ -77,6 +78,8 @@ export class userSchema extends Document {
         default: [],
     })
     likes: Array<Record<string, any>>;
+
+
 }
 
-export const userModelSchema = SchemaFactory.createForClass(userSchema);
+export const userModelSchema = SchemaFactory.createForClass(UserSchema);

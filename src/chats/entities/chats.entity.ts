@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne,
 import { InvitacionesGrupos } from "./invitaciones.entity";
 import { SolicitudAmistad } from "src/users/entities/solicitud.entity";
 import { MiembrosComunidades } from "./miembrosComunidad.entity";
-import { userSchema } from "src/users/entities/users.schema";
+import { User } from "src/users/entities/user.entity";
 
 @Entity('chatsPrivados')
 export class ChatPrivado {
@@ -31,9 +31,9 @@ export class Grupos {
     @Column({ nullable: true })
     imagen: string
 
-    @ManyToMany(() => userSchema, (user) => user.grupos, { cascade: true })
+    @ManyToMany(() => User, (user) => user.grupos, { cascade: true })
     @JoinTable()
-    miembros: userSchema[];
+    miembros: User[];
 
     @OneToMany(() => InvitacionesGrupos, (invitacion) => invitacion.grupo, { cascade: true })
     invitaciones: InvitacionesGrupos[]

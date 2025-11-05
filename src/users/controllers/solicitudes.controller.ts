@@ -41,7 +41,7 @@ export class SolicitudesController {
         return this.solicitudesAmistadService.findAllReceiveRequest(userId);
     }
 
-    @Patch('request-accept/:requestId/status')
+    @Patch('update/:requestId')
     @ApiOperation({ summary: 'update status from friend request' })
     async acceptRequestStatus(
         @Param('requestId') requestId: string,
@@ -49,24 +49,7 @@ export class SolicitudesController {
         @Body('newStatus') newStatus: Status
     ) {
         const userId = req.user.id
-        if (!Object.values(Status).includes(newStatus)) {
-            throw new HttpException('Invalid status', HttpStatus.BAD_REQUEST);
-        }
-        return this.solicitudesAmistadService.acceptedRequest(requestId, userId, newStatus);
-    }
-
-    @Patch('request-decline/:requestId/status')
-    @ApiOperation({ summary: 'update status from friend request' })
-    async declineRequestStatus(
-        @Param('requestId') requestId: string,
-        @Request() req: any,
-        @Body('newStatus') newStatus: Status
-    ) {
-        const userId = req.user.id
-        if (!Object.values(Status).includes(newStatus)) {
-            throw new HttpException('Invalid status', HttpStatus.BAD_REQUEST);
-        }
-        return this.solicitudesAmistadService.declineRequest(requestId, userId, newStatus);
+        return this.solicitudesAmistadService.updateRequest(requestId, userId, newStatus);
     }
 
     @Delete(':requestId')

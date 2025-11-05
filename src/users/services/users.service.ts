@@ -5,14 +5,14 @@ import * as bcrypt from 'bcrypt';
 import { SALT_ROUNDS } from 'src/config/constants/bycript.constants';
 import { SolicitudesAmistadService } from './solicitudesAmistad.service';
 import { UserQueries } from '../dto/querie.dto';
-import { userSchema } from '../entities/users.schema';
+import { UserSchema } from '../entities/users.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(userSchema.name) private readonly userModel: Model<userSchema>,
+    @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
     @Inject(forwardRef(() => SolicitudesAmistadService))
     private readonly solicitudAmistadServices: SolicitudesAmistadService,
   ) { }
@@ -39,8 +39,10 @@ export class UsersService {
    * @param userQueries 
    * @returns lista de usuarios que cumplen con los criterios de búsqueda
    */
-  async findAllUsers(userId: string, userQueries: UserQueries): Promise<userSchema[]> {
+  async findAllUsers(userId: string, userQueries: UserQueries): Promise<any[]> {
     let query: any = {};
+
+    query._id = { $ne: userId }
 
     // Filtro por nombre o email
     if (userQueries.search) {
@@ -55,19 +57,33 @@ export class UsersService {
       query.pais = { $regex: userQueries.country, $options: 'i' };
     }
 
+    //const fieldsToSelect = ' nombre descripcion email imagen'
+
     const users = await this.userModel
       .find(query)
       .limit(userQueries.limit || 0)
       .sort({ nombre: 1 })
-      .lean();
+      .lean()
+      .exec();
 
-    if (!users.length) {
+    if (!users || users.length === 0) {
       throw new HttpException(
         'No se encontraron usuarios que coincidan con la búsqueda.', HttpStatus.NOT_FOUND
       );
     }
 
-    return users;
+    const result = users.map(user => ({
+      id: user._id.toString(),
+      nombre: user.nombre,
+      descripcion: user.descripcion,
+      imagen: user.imagen,
+      email: user.email,
+      fechaNto: user.fechaNto,
+      sexo: user.sexo,
+      pais: user.pais
+    }))
+
+    return result;
   }
 
   async findAllFriends(userId: string) {
@@ -90,17 +106,20 @@ export class UsersService {
   }
 
   /**
-   * Función para buscar sólo un usuario ¿
+   * Función para buscar sólo un usuario 
    * @param id 
    * @returns Usuario
    */
   async findOneUser(id: string) {
-    const user = await this.userModel.findById(id).select('-password').exec();
+    const user = await this.userModel.findById(id).select('-password').lean().exec();
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND)
     }
-    return user
+    return {
+      ...user,
+      _id: user._id.toString(),
+    }
   }
 
   /**
@@ -116,13 +135,16 @@ export class UsersService {
 
     const updated = await this.userModel.findByIdAndUpdate(id, updateUser, {
       new: true,
-    });
+    }).lean();
 
     if (!updated) {
       throw new HttpException("User hasn't been updated", HttpStatus.CONFLICT);
     }
 
-    return updated;
+    return {
+      ...updated,
+      _id: updated._id.toString()
+    };
   }
 
   /**
@@ -151,6 +173,20 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  /**
+ * Verifica si un usuario existe sin cargar el documento completo
+ * @param id - ID del usuario
+ * @returns true si existe, false si no
+ */
+  async userExists(id: string): Promise<boolean> {
+    try {
+      const count = await this.userModel.countDocuments({ _id: id }).exec();
+      return count > 0;
+    } catch (error) {
+      return false;
+    }
   }
 
 }

@@ -6,25 +6,26 @@ import { SolicitudesController } from './controllers/solicitudes.controller';
 import { SolicitudesAmistadService } from './services/solicitudesAmistad.service';
 import { ChatsModule } from 'src/chats/chats.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { userModelSchema, userSchema } from './entities/users.schema';
+import { userModelSchema, UserSchema } from './entities/users.schema';
 import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema';
+import { User } from './entities/user.entity';
 
 @Module({
-  imports: [
-    MongooseModule.forFeature([
-      {
-        name: userSchema.name,
-        schema: userModelSchema,
-      },
-      {
-        name: FriendRequest.name,
-        schema: FriendRequestSchema
-      }
-    ]),
-    forwardRef(() => ChatsModule),
+  imports: [TypeOrmModule.forFeature([User]),
+  MongooseModule.forFeature([
+    {
+      name: UserSchema.name,
+      schema: userModelSchema,
+    },
+    {
+      name: FriendRequest.name,
+      schema: FriendRequestSchema
+    }
+  ]),
+  forwardRef(() => ChatsModule),
   ],
   controllers: [UsersController, SolicitudesController],
   providers: [UsersService, SolicitudesAmistadService],
-  exports: [TypeOrmModule, SolicitudesAmistadService, UsersService]
+  exports: [TypeOrmModule, MongooseModule, SolicitudesAmistadService, UsersService]
 })
 export class UsersModule { }

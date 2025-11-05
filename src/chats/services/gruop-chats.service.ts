@@ -7,7 +7,7 @@ import { createGrupoDto } from '../dto/GruposDto/create-grupos.dto';
 import { updateGruposDto } from '../dto/GruposDto/update-grupos.dto';
 import { UsersService } from 'src/users/services/users.service';
 import { ComunityAndGroupQueries } from '../dto/queries/comunities-queries.dto';
-import { userSchema } from 'src/users/entities/users.schema';
+import { UserSchema } from 'src/users/entities/users.schema';
 
 @Injectable()
 export class GroupChatsService {
@@ -75,15 +75,15 @@ export class GroupChatsService {
         return group;
     }
 
-    async addUserToGroup(groupId: number, user: userSchema): Promise<Grupos> {
-        const group = await this.findGroupById(groupId);
-
-        if (group.miembros.some((miembro) => miembro.id === user.id)) {
-            throw new NotFoundException(`El usuario ya pertenece al grupo.`);
-        }
-
-        group.miembros.push(user);
-        return await this.groupRepository.save(group);
+    async addUserToGroup(groupId: number, user: UserSchema) {
+        //  const group = await this.findGroupById(groupId);
+        //
+        //  if (group.miembros.some((miembro) => miembro.id === user.id)) {
+        //      throw new NotFoundException(`El usuario ya pertenece al grupo.`);
+        //  }
+        //
+        //  group.miembros.push(user);
+        //  return await this.groupRepository.save(group);
     }
 
     /* async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {

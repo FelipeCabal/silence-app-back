@@ -21,12 +21,12 @@ export class UsersController {
     return this.usersService.findAllUsers(userId, userQueries);
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new User' })
-  //@ApiResponse({ status: 200, description: '' })
-  async create(@Body() createUser: CreateUserDto) {
-    return this.usersService.createUser(createUser);
-  }
+  //@Post()
+  //@ApiOperation({ summary: 'Create a new User' })
+  ////@ApiResponse({ status: 200, description: '' })
+  //async create(@Body() createUser: CreateUserDto) {
+  //  return this.usersService.createUser(createUser);
+  //}
 
   @Get(':id/friends')
   @ApiOperation({ summary: "Get all friends from an user" })
