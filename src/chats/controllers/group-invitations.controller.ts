@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, ParseIntPipe, Post, Request, UseGuards } from "@nestjs/common";
+ import { Controller, Delete, Get, Param, ParseIntPipe, Post, Request, UseGuards } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { GroupInvitationsService } from "../services/group-invitations.service";
@@ -51,4 +51,4 @@ export class InvitationsGroupController {
         await this.groupInvitationsService.rejectInvitation(invitationId, userId);
     }
 
-}
+} 

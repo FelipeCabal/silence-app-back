@@ -1,6 +1,7 @@
 import { Exclude } from "class-transformer";
 import { Comunidades, Grupos } from "src/chats/entities/chats.entity";
-import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity";
+/* import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity"; */
+import { InvitacionesGrupos } from "src/chats/entities/invitaciones.schema";
 import { Publicaciones } from "src/publicaciones/entities/publicaciones.entity";
 import { Column, Entity, IsNull, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { SolicitudAmistad } from "./solicitud.entity";
