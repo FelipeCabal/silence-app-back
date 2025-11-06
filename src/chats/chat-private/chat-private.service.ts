@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -24,14 +25,20 @@ export class ChatPrivateService {
   ) {}
 
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivado> {
-    const existe = await this.chatPrivadoModel.findOne({
-      amistad: dto.amistad,
-    });
-    if (existe)
-      throw new ConflictException('Ya existe un chat para esta amistad.');
-
-    const chat = new this.chatPrivadoModel(dto);
-    return chat.save();
+    try{
+        const solicitud = await this.findOneReqMongo(dto.amistad);
+        if(!solicitud){
+          throw new NotFoundException({
+            err:false,
+            msg:`SolicitudAmistad con ID ${dto.amistad} no encontrada.`
+          })
+        }
+        const newChat =  new this.chatPrivadoModel(dto);
+        return newChat.save();
+    }catch(e){
+      throw new  InternalServerErrorException('error al crear chat privado')
+    }
+  
   }
 
   async findById(id: string): Promise<ChatPrivado> {
@@ -41,6 +48,22 @@ export class ChatPrivateService {
     if (!chat) throw new NotFoundException('Chat no encontrado');
     return chat;
   }
+
+  //PASAR ESTA FUNCION AL SERVICIO SOLICITD DE AMISTAD
+      async findOneReqMongo(requestId:string){
+        const firendRequest = await this.solicitudAmistades
+        .find({_id :requestId})
+        .populate({
+          path: 'userEnvia'
+        })
+        .populate({
+          path: 'userRecibe'
+        }).exec();
+
+        return firendRequest
+    }
+
+    /////////////////
 
   //PASAR EST ECODIGO A USER DESPUES..
   async findAllFriends(userId: string): Promise<any> {

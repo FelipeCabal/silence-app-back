@@ -1,14 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Role } from 'src/config/enums/roles.enum';
+import { CommunitySummary, UserSummary } from '../models/all.summary';
 
 @Schema({ timestamps: true })
 export class MiembrosComunidades extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'Comunidades', required: true })
-  comunidad: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  usuario: Types.ObjectId;
+  @Prop({ type: UserSummary, required: true })
+  usuarioSummary: UserSummary;
 
   @Prop({
     type: String,

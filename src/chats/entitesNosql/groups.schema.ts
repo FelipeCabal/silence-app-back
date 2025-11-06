@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { MembersSummary } from '../models/all.summary';
 
 @Schema({ timestamps: true })
 export class Grupos extends Document {
@@ -12,11 +13,9 @@ export class Grupos extends Document {
   @Prop()
   imagen?: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
-  miembros: Types.ObjectId[];
+  @Prop({ type: MembersSummary, required: true })
+  membersSummary: MembersSummary;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'InvitacionesGrupos' }] })
-  invitaciones: Types.ObjectId[];
 }
 
 export const GruposSchema = SchemaFactory.createForClass(Grupos);

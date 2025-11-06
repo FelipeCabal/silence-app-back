@@ -70,6 +70,8 @@ export class SolicitudesAmistadService {
         return receiveReq;
     }
 
+
+
     async findOneReq(requestId: number) {
         const friendRequest = await this.solicitudRepository
             .createQueryBuilder('solicitud')

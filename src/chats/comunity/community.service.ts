@@ -37,7 +37,8 @@ export class CommunityService {
   async findById(id: string): Promise<Comunidades> {
     const comunidad = await this.comunidadesModel
       .findById(id)
-      .populate({ path: 'miembros', populate: { path: 'usuario' } });
+      .populate({ path: 'miembros', populate: { path: 'usuario' } 
+      });
     if (!comunidad) throw new NotFoundException('Comunidad no encontrada.');
     return comunidad;
   }
