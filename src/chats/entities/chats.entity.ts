@@ -1,8 +1,8 @@
-import { User } from "src/users/entities/user.entity";
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToMany, OneToOne, PrimaryColumnCannotBeNullableError, PrimaryGeneratedColumn } from "typeorm";
 import { InvitacionesGrupos } from "./invitaciones.entity";
 import { SolicitudAmistad } from "src/users/entities/solicitud.entity";
 import { MiembrosComunidades } from "./miembrosComunidad.entity";
+import { User } from "src/users/entities/user.entity";
 
 @Entity('chatsPrivados')
 export class ChatPrivado {
