@@ -1,9 +1,13 @@
-import { Prop } from "@nestjs/mongoose";
-import { Role } from "src/config/enums/roles.enum";
+import { Prop } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 
 export class MembersSummary {
-    @Prop()
-  _id: string;
-@Prop()
-  role: Role;
+  @Prop({ type: Types.ObjectId })
+  _id: Types.ObjectId;
+
+  @Prop()
+  nombre: string;
+
+  @Prop()
+  avatar?: string;
 }

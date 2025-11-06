@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Status } from 'src/config/enums/status.enum';
-import { GroupSummary, UserSummary } from '../models/all.summary';
+import { GroupSummary } from '../models/groups.model';
+import { UserSummary } from 'src/users/entities/user.model';
 
 @Schema({ timestamps: true })
 export class InvitacionesGrupos extends Document {

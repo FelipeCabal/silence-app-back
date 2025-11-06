@@ -1,24 +1,27 @@
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { SolicitudAmistad } from "../entities/solicitud.entity";
 import { UsersService } from "./users.service";
 import { forwardRef, HttpException, HttpStatus, Inject } from "@nestjs/common";
 import { Status } from "src/config/enums/status.enum";
 import { PrivateChatsService } from "src/chats/services/private-chats.service";
+import { InjectModel } from "@nestjs/mongoose";
+import { FriendRequest } from "../entities/solicitud.schema";
+import { Model } from "mongoose";
+import { UserSchema } from "../entities/users.schema";
 
 export class SolicitudesAmistadService {
     constructor(
         @Inject(forwardRef(() => UsersService))
         private readonly usersService: UsersService,
 
+        @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
+
         @Inject(forwardRef(() => PrivateChatsService))
         private readonly privateChatsService: PrivateChatsService,
 
-        @InjectRepository(SolicitudAmistad)
-        private readonly solicitudRepository: Repository<SolicitudAmistad>
+        @InjectModel(FriendRequest.name)
+        private readonly requestModel: Model<FriendRequest>
     ) { }
 
-    async sendFriendRequest(userSendId: number, userReceiveId: number) {
+    async sendFriendRequest(userSendId: string, userReceiveId: string) {
         const userSend = await this.usersService.findOneUser(userSendId);
         const userReceive = await this.usersService.findOneUser(userReceiveId);
 
@@ -30,7 +33,7 @@ export class SolicitudesAmistadService {
             throw new HttpException("You cann't to send request to yourself", HttpStatus.BAD_REQUEST);
         }
 
-        const requestExistitng = await this.solicitudRepository.findOne({
+        const requestExistitng = await this.requestModel.findOne({
             where: [
                 { userEnvia: userSend, userRecibe: userReceive, status: Status.Pendiente },
                 { userEnvia: userReceive, userRecibe: userSend, status: Status.Pendiente }
@@ -41,79 +44,175 @@ export class SolicitudesAmistadService {
             throw new HttpException("request already exists", HttpStatus.CONFLICT);
         }
 
-        const friendRequest = this.solicitudRepository.create({
-            userEnvia: userSend,
-            userRecibe: userReceive,
+        const friendRequest = new this.requestModel({
+            userEnvia: userSend._id,
+            userRecibe: userReceive._id,
             status: Status.Pendiente
         });
 
-        await this.solicitudRepository.save(friendRequest);
+        await this.userModel.updateOne(
+            { _id: userSendId },
+            {
+                $push: {
+                    "solicitudesAmistad.0.enviadas": {
+                        _id: friendRequest._id.toString(),
+                        to: userReceiveId,
+                        estado: "Pending",
+                        fecha: new Date(),
+                    }
+                }
+            }
+        );
 
-        return friendRequest;
+        await this.userModel.updateOne(
+            { _id: userReceiveId },
+            {
+                $push: {
+                    "solicitudesAmistad.0.recibidas": {
+                        _id: friendRequest._id.toString(),
+                        from: userSendId,
+                        estado: "Pending",
+                        fecha: new Date(),
+                    }
+                }
+            }
+        )
+
+        const savedRequest = await friendRequest.save()
+        return {
+            ...savedRequest.toObject(),
+            _id: savedRequest._id.toString()
+        };
     }
 
-    async findAllReceiveRequest(userId: number) {
-        const user = await this.usersService.findOneUser(userId);
-
-        if (!user) {
-            throw new HttpException("user not found", HttpStatus.NOT_FOUND);
+    async findAllReceiveRequest(userId: string) {
+        const exists = await this.usersService.userExists(userId);
+        if (!exists) {
+            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
         }
 
-        const receiveReq = await this.solicitudRepository.find({
-            where: {
-                userRecibe: user,
+        const requests = await this.requestModel
+            .find({
+                userRecibe: userId,
                 status: Status.Pendiente
-            },
-            relations: ['userEnvia']
-        })
+            })
+            .populate({
+                path: 'userEnvia',
+                select: '_id nombre imagen descripcion email'
+            })
+            .select('_id userEnvia status createdAt')
+            .lean()
+            .exec();
 
-        return receiveReq;
+        return requests.map(req => {
+            const sender = req.userEnvia as any;
+
+            return {
+                id: req._id.toString(),
+                status: req.status,
+                sender: {
+                    id: sender._id ? sender._id.toString() : sender.toString(),
+                    nombre: sender.nombre || '',
+                    imagen: sender.imagen || null,
+                    descripcion: sender.descripcion || '',
+                    email: sender.email || ''
+                }
+            };
+        });
     }
 
-
-
-    async findOneReq(requestId: number) {
-        const friendRequest = await this.solicitudRepository
-            .createQueryBuilder('solicitud')
-            .leftJoinAndSelect('solicitud.userEnvia', 'userEnvia')
-            .leftJoinAndSelect('solicitud.userRecibe', 'userRecibe')
-            .where('solicitud.id = :requestId', { requestId })
-            .getOne();
-
-        return friendRequest;
+    async findOneReq(requestId: string) {
+        return this.requestModel
+            .findById(requestId)
+            .populate('userEnvia', 'nombre imagen')
+            .populate('userRecibe', 'nombre imagen')
     }
 
-    async updateRequest(requestId: number, userId: number, newStatus: Status) {
+    async updateRequest(requestId: string, userId: string, newStatus: Status) {
+
         const request = await this.findOneReq(requestId);
 
         if (!request) {
-            throw new HttpException("request not found", HttpStatus.NOT_FOUND);
+            throw new HttpException('Request not found', HttpStatus.NOT_FOUND);
         }
 
-        if (request.userRecibe.id !== userId) {
-            throw new HttpException("You don't authorized for this action", HttpStatus.UNAUTHORIZED);
+        if (request.status !== Status.Pendiente) {
+            throw new HttpException(
+                'Request has already been processed',
+                HttpStatus.BAD_REQUEST
+            );
         }
 
-        if (newStatus === Status.Aceptada) {
-            const friendship = await this.privateChatsService.create(requestId)
+        if (request.userRecibe._id.toString() !== userId) {
+            throw new HttpException("You're not authorized", HttpStatus.UNAUTHORIZED);
+        }
 
-            if (friendship) {
-                return this.solicitudRepository.update(
-                    { id: requestId }, { status: Status.Aceptada });
-            }
-            else {
-                throw new HttpException("Internal server Error", HttpStatus.BAD_REQUEST)
-            }
+        console.log('newStatus recibido:', newStatus);
+        console.log('Enum Status:', Status);
+
+        if (newStatus !== Status.Aceptada && newStatus != Status.Rechazada) {
+            throw new HttpException('Status must be A (Accepted) or R (Rejected)', HttpStatus.BAD_REQUEST
+            );
         }
-        if (newStatus === Status.Rechazada) {
-            return this.solicitudRepository.update(
-                { id: requestId },
-                { status: Status.Rechazada });
+
+        const senderId = request.userEnvia._id.toString();
+        const receiverId = request.userRecibe._id.toString();
+
+        try {
+            const updatedRequest = await this.requestModel.findByIdAndUpdate(
+                requestId,
+                { status: newStatus },
+                { new: true }
+            );
+
+            await this.userModel.updateOne(
+                { _id: senderId, 'solicitudesAmistad.enviadas._id': requestId },
+                {
+                    $set: {
+                        'solicitudesAmistad.$[].enviadas.$[elem].estado': newStatus,
+                        'solicitudesAmistad.$[].enviadas.$[elem].fecha': new Date()
+                    }
+                },
+                { arrayFilters: [{ 'elem._id': requestId }] }
+            );
+
+            await this.userModel.updateOne(
+                { _id: receiverId, 'solicitudesAmistad.recibidas._id': requestId },
+                {
+                    $set: {
+                        'solicitudesAmistad.$[].recibidas.$[elem].estado': newStatus,
+                        'solicitudesAmistad.$[].recibidas.$[elem].fecha': new Date()
+                    }
+                },
+                { arrayFilters: [{ 'elem._id': requestId }] }
+            );
+
+            //let chatId = null;
+            //if (newStatus === Status.Aceptada) {
+            //    const chat = await this.privateChatsService.create(senderId, receiverId);
+            //    
+            //    if (chat) {
+            //        chatId = chat._id || chat.id;
+            //        
+            //        // Actualizar la solicitud con el ID del chat
+            //        await this.requestModel.findByIdAndUpdate(
+            //            requestId,
+            //            { chatPrivado: chatId },
+            //            { session }
+            //        ).exec();
+            //    }
+            //}
+
+            return updatedRequest;
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'Error processing request',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
-        throw new HttpException("invalid action", HttpStatus.BAD_REQUEST);
     }
 
-    async deleteRequest(requestId: number, userId: number) {
+    async deleteRequest(requestId: string, userId: string) {
         const user = await this.usersService.findOneUser(userId);
 
         if (!user) {
@@ -125,43 +224,44 @@ export class SolicitudesAmistadService {
             throw new HttpException("friend request not found", HttpStatus.NOT_FOUND);
         }
 
-        if (friendRequest.userEnvia.id !== userId) {
+        if (friendRequest.userEnvia._id.toString() !== userId) {
             throw new HttpException("You don't have authorization for this action", HttpStatus.UNAUTHORIZED);
         }
 
-        const deleteRequest = await this.solicitudRepository.delete({ id: requestId });
-        if (deleteRequest.affected === 0) {
+        const deleteRequest = await this.requestModel.findByIdAndDelete(requestId);
+        if (!deleteRequest) {
             throw new HttpException("The request wasn't deleted", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return deleteRequest
+        return deleteRequest;
     }
-    async findOneRequestByIds(user1Id: number, user2Id: number) {
-        const request = await this.solicitudRepository
-            .createQueryBuilder('solicitud')
-            .where(
-                '(solicitud.userEnvia = :user1Id AND solicitud.userRecibe = :user2Id) OR (solicitud.userEnvia = :user2Id AND solicitud.userRecibe = :user1Id)',
-                { user1Id, user2Id }
-            )
-            .getOne();
 
-        return request;
-    }
-    async findUserRequests(userId: number) {
-        const user = await this.usersService.findOneUser(userId);
-
-        if (!user) {
-            throw new HttpException("user not found", HttpStatus.NOT_FOUND);
-        }
-
-        const requests = await this.solicitudRepository.find({
-            where: [
-                { userEnvia: user },
-                { userRecibe: user }
+    async findOneRequestByIds(user1Id: string, user2Id: string) {
+        return this.requestModel.findOne({
+            $or: [
+                { userEnvia: user1Id, userRecibe: user2Id },
+                { userEnvia: user2Id, userRecibe: user1Id },
             ],
-            relations: ['userEnvia', 'userRecibe']
         });
-
-        return requests;
     }
+
+
+    async findUserRequests(userId: string) {
+        return this.requestModel
+            .find({ $or: [{ userEnvia: userId }, { userRecibe: userId }] })
+            .populate('userEnvia', 'nombre imagen')
+            .populate('userRecibe', 'nombre imagen');
+    }
+
+    async findAcceptedFriendships(userId: string) {
+        return this.requestModel
+            .find({
+                status: Status.Aceptada,
+                $or: [{ userEnvia: userId }, { userRecibe: userId }],
+            })
+            .populate('userEnvia', 'nombre imagen descripcion')
+            .populate('userRecibe', 'nombre imagen descripcion')
+            .exec();
+    }
+
 
 }

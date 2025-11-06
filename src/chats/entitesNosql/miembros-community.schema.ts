@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Role } from 'src/config/enums/roles.enum';
-import { CommunitySummary, UserSummary } from '../models/all.summary';
+import { UserSummary } from '../../users/entities/user.model';
 
 @Schema({ timestamps: true })
 export class MiembrosComunidades extends Document {

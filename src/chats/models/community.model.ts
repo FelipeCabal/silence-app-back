@@ -1,15 +1,13 @@
-import { Prop } from "@nestjs/mongoose";
-import { MembersSummary } from "./member.model";
+import { Prop } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 
 export class CommunitySummary {
-  @Prop()
-  _id: string;
+  @Prop({ type: Types.ObjectId })
+  _id: Types.ObjectId;
+
   @Prop()
   nombre: string;
+
   @Prop()
   imagen?: string;
-
- @Prop({ type: [MembersSummary], default: [] })
-  miembrosSummary: MembersSummary[];
-
 }

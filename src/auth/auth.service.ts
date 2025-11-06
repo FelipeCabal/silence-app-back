@@ -23,7 +23,7 @@ export class AuthService {
             email: user.email,
             name: user.nombre
         };
-        
+
         return {
             access_token: await this.JwtServices.signAsync(payload),
         };
@@ -43,7 +43,7 @@ export class AuthService {
         return this.login(login)
     }
 
-    async profile(id: number) {
+    async profile(id: string) {
         const user = await this.UsersService.findOneUser(id)
         return user
     }

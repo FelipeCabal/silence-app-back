@@ -7,211 +7,95 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ChatPrivado } from '../entitesNosql/chats.schema';
-import { CreateChatPrivadoDto } from './dto/create-chat-private.dto';
-import { ComunityAndGroupQueries } from '../dto/queries/comunities-queries.dto';
-import { SolicitudAmistades } from 'src/users/schames/solicitud.schema';
-import { User } from 'src/users/schames/user.schema';
-import { ObjectId } from 'typeorm';
+import { ChatPrivadoResponseDto } from '../response/chat-private.response';
+import { CreateChatPrivadoDto } from '../request/chat-private.dto';
+import { FriendRequest } from 'src/users/entities/solicitud.model';
 
 @Injectable()
 export class ChatPrivateService {
   constructor(
     @InjectModel(ChatPrivado.name)
     private readonly chatPrivadoModel: Model<ChatPrivado>,
-    @InjectModel(User.name)
-    private readonly UserModel: Model<User>,
-    @InjectModel(SolicitudAmistades.name)
-    private readonly solicitudAmistades: Model<SolicitudAmistades>,
+    
+    @InjectModel(FriendRequest.name)
+    private readonly friendRequestModel: Model<FriendRequest>,
   ) {}
 
-  async create(dto: CreateChatPrivadoDto): Promise<ChatPrivado> {
-    try{
-        const solicitud = await this.findOneReqMongo(dto.amistad);
-        if(!solicitud){
-          throw new NotFoundException({
-            err:false,
-            msg:`SolicitudAmistad con ID ${dto.amistad} no encontrada.`
-          })
-        }
-        const newChat =  new this.chatPrivadoModel(dto);
-        return newChat.save();
-    }catch(e){
-      throw new  InternalServerErrorException('error al crear chat privado')
+ 
+  async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
+    try {
+      const friendship = await this.friendRequestModel.findById(dto.amistad).lean();
+
+      if (!friendship) {
+        throw new NotFoundException('La solicitud de amistad no existe.');
+      }
+
+      const usuario1 = friendship.userEnvia;
+      const usuario2 = friendship.userRecibe;
+
+      const exists = await this.chatPrivadoModel.findOne({
+        $or: [
+          { 'usuario1._id': usuario1._id, 'usuario2._id': usuario2._id },
+          { 'usuario1._id': usuario2._id, 'usuario2._id': usuario1._id },
+        ],
+      });
+
+      if (exists) {
+        throw new ConflictException('El chat privado ya existe.');
+      }
+
+      const chat = await this.chatPrivadoModel.create({
+        usuario1,
+        usuario2,
+        lastMessage: dto.lastMessage ?? null,
+      });
+
+      return ChatPrivadoResponseDto.fromModel(chat.toObject());
+    } catch (err) {
+      console.error(err);
+      throw new InternalServerErrorException('Error al crear chat privado.');
     }
-  
   }
 
-  async findById(id: string): Promise<ChatPrivado> {
-    const chat = await this.chatPrivadoModel
-      .findById(id)
-      .populate({ path: 'amistad', select: 'userEnvia userRecibe status' });
+  async findById(id: string): Promise<ChatPrivadoResponseDto> {
+    const chat = await this.chatPrivadoModel.findById(id).lean();
     if (!chat) throw new NotFoundException('Chat no encontrado');
-    return chat;
+
+    return ChatPrivadoResponseDto.fromModel(chat);
   }
 
-  //PASAR ESTA FUNCION AL SERVICIO SOLICITD DE AMISTAD
-      async findOneReqMongo(requestId:string){
-        const firendRequest = await this.solicitudAmistades
-        .find({_id :requestId})
-        .populate({
-          path: 'userEnvia'
-        })
-        .populate({
-          path: 'userRecibe'
-        }).exec();
+  async findAllByUser(userId: string): Promise<ChatPrivadoResponseDto[]> {
+    const chats = await this.chatPrivadoModel
+      .find({
+        $or: [
+          { 'usuario1._id': new Types.ObjectId(userId) },
+          { 'usuario2._id': new Types.ObjectId(userId) },
+        ],
+      })
+      .sort({ updatedAt: -1 })
+      .lean();
 
-        return firendRequest
-    }
-
-    /////////////////
-
-  //PASAR EST ECODIGO A USER DESPUES..
-  async findAllFriends(userId: string): Promise<any> {
-    const friendsList =
-      await this.solicitudAmistades.aggregate<SolicitudAmistades>([
-        {
-          $match: {
-            status: 'A',
-            $or: [{ userRecibe: userId }, { userEnvia: userId }],
-          },
-        },
-        {
-          $lookup: {
-            from: 'Users',
-            localField: 'userEnvia',
-            foreignField: '_id',
-            as: 'userEnvia',
-          },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'userRecibe',
-            foreignField: '_id',
-            as: 'userRecibe',
-          },
-        },
-        { $unwind: '$userEnvia' },
-        { $unwind: '$userRecibe' },
-        {
-          $addFields: {
-            amigo: {
-              $cond: {
-                if: { $eq: ['$userEnvia._id', new Types.ObjectId(userId)] },
-                then: '$userRecibe',
-                else: '$userEnvia',
-              },
-            },
-          },
-        },
-        {
-          $project: {
-            solicitudId: '$$ROOT',
-            user: '$amigo',
-            _id: 0,
-          },
-        },
-      ]);
-    console.log(friendsList);
-    return friendsList;
+    return chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
   }
 
-  ////
+  async updateLastMessage(id: string, message: string) {
+    const chat = await this.chatPrivadoModel
+      .findByIdAndUpdate(
+        id,
+        { lastMessage: message, updatedAt: new Date() },
+        { new: true },
+      )
+      .lean();
 
-  async findAll(
-    chatQueries: ComunityAndGroupQueries,
-    userId: string,
-  ): Promise<ChatPrivado[]> {
-    //TODO ---- HACER VERIFICACIÓN DE USER Y CHAT PRIVADOS
-    const friendships = await this.findAllFriends(userId);
-    if (!friendships || friendships.length === 0) {
-      throw new NotFoundException({
-        err: true,
-        msg: 'no tiene amigos con chat privados',
-      });
-    }
-    const friendshipIds = friendships.map(
-      (f) => new ObjectId(f.solicitudId._id),
-    );
-    let privateChats = await this.chatPrivadoModel.aggregate([
-      {
-        $match: { amistad: { $in: friendshipIds } },
-      },
-      {
-        $lookup: {
-          from: 'solicitudamistades',
-          localField: 'amistad',
-          foreignField: '_id',
-          as: 'amistad',
-        },
-      },
-      { $unwind: '$amistad' },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'amistad.userEnvia',
-          foreignField: '_id',
-          as: 'amistad.userEnvia',
-        },
-      },
-      { $unwind: '$amistad.userEnvia' },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'amistad.userRecibe',
-          foreignField: '_id',
-          as: 'amistad.userRecibe',
-        },
-      },
-      { $unwind: '$amistad.userRecibe' },
-      {
-        $addFields: {
-          friend: {
-            $cond: {
-              if: {
-                $eq: ['$amistad.userEnvia._id', new Types.ObjectId(userId)],
-              },
-              then: '$amistad.userRecibe',
-              else: '$amistad.userEnvia',
-            },
-          },
-        },
-      },
-      {
-        $project: {
-          id: '$_id',
-          createdAt: '$createdAt',
-          friend: 1,
-          friendName: '$friend.nombre',
-        },
-      },
-    ]);
+    if (!chat) throw new NotFoundException('Chat no encontrado');
 
-    if (chatQueries.search) {
-      const search = chatQueries.search.toLowerCase();
-      privateChats = privateChats.filter((chat) =>
-        chat.friendName.toLowerCase().includes(search),
-      );
-    }
-
-    privateChats.sort((a, b) => a.friendName.localeCompare(b.friendName));
-
-    if (chatQueries.limit && Number.isInteger(chatQueries.limit)) {
-      privateChats = privateChats.slice(0, chatQueries.limit);
-    }
-
-    if (privateChats.length === 0) {
-      throw new NotFoundException({
-        err: true,
-        msg: 'No se encontraron chats privados para este usuario.',
-      });
-    }
-
-    return privateChats;
+    return ChatPrivadoResponseDto.fromModel(chat);
   }
 
-  async delete(id: string): Promise<void> {
-    const result = await this.chatPrivadoModel.findByIdAndDelete(id);
-    if (!result) throw new NotFoundException('Chat no encontrado');
+  async delete(id: string): Promise<{ deleted: true }> {
+    const deleted = await this.chatPrivadoModel.findByIdAndDelete(id);
+    if (!deleted) throw new NotFoundException('Chat no encontrado');
+
+    return { deleted: true };
   }
 }

@@ -1,81 +1,92 @@
-import { Body, Controller, Post, Param, ParseIntPipe, Put, Delete, Patch, Request, Get, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Param,
+  Delete,
+  Request,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { ComunidadesService } from '../services/comunity-chats.service';
-import { Role } from 'src/config/enums/roles.enum';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { UseGuards } from '@nestjs/common';
-import { ComunityAndGroupQueries } from '../dto/queries/comunities-queries.dto';
+import { CreateComunidadDto } from '../request/community.dto';
 import { CommunityService } from './community.service';
 
 @Controller('community')
-@ApiTags('comunidades')
+@ApiTags('community')
 @UseGuards(AuthGuard)
 export class ComunidadesController {
   constructor(private readonly communityService: CommunityService) {}
 
-    @Get()
-    @ApiOperation({ summary: 'obtener todas las comunidades del usuario logueado' })
-    findAll() {
-        return this.communityService.findAll();
-    }
+  @Get()
+  @ApiOperation({ summary: 'Obtener todas las comunidades' })
+  async findAll() {
+    const data = await this.communityService.findAll();
+    return {
+      err: false,
+      msg: 'Comunidades obtenidas correctamente',
+      data,
+    };
+  }
 
-    @Get('user/:id')
-    @ApiOperation({ summary: 'obtener todas las comunidades de un usuario' })
-    findUsersComunity(
-        @Param('id', ParseIntPipe) userId: string,
-        @Query() queries: ComunityAndGroupQueries
-    ) {
-   //     return this.communityService.addMiembro(userId, queries)
-    }
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener comunidad por ID' })
+  async findById(@Param('id') id: string) {
+    const data = await this.communityService.findById(id);
+    return {
+      err: false,
+      msg: 'Comunidad obtenida correctamente',
+      data,
+    };
+  }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'obtener una comunidad por el id' })
-    findCommunity(
-        @Param('id', ParseIntPipe) communityId: number,
-    ) {
-    //    return this.communityService(communityId)
-    }
+  @Post()
+  @ApiOperation({ summary: 'Crear una comunidad' })
+  async createCommunity(@Body() dto: CreateComunidadDto, @Request() req: any) {
+    const userId = req.user.id;
+    const data = await this.communityService.create(dto, userId);
+    return {
+      err: false,
+      msg: 'Comunidad creada correctamente',
+      data,
+    };
+  }
 
-    @Post()
-    @ApiOperation({ summary: 'Crear comunidad' })
-    createCommunity(
-        @Body() createCommunityDto: any,
-        @Request() req: any
-    ) {
-        const ownerId = req.user.id;
-        return this.communityService.addMiembro(createCommunityDto, ownerId);
-    }
+  @Post(':id/members')
+  @ApiOperation({ summary: 'Unirse a una comunidad' })
+  async addMember(@Param('id') communityId: string, @Request() req: any) {
+    const userId = req.user.id;
+    await this.communityService.addMiembro(communityId, userId);
+    return {
+      err: false,
+      msg: 'Miembro agregado correctamente',
+      data: null,
+    };
+  }
 
-    @Post(':id/miembros')
-    @ApiOperation({ summary: 'Añadir miembro a comunidad' })
-    addMember(
-        @Param('id', ParseIntPipe) communityId: number,
-        @Request() req: any
-    ) {
-        const userId = req.user.id;
-   //     return this.communityService.create(communityId, userId);
-    }
+  @Delete(':id/members/:userId')
+  @ApiOperation({ summary: 'Eliminar miembro de comunidad' })
+  async removeMember(
+    @Param('id') communityId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.communityService.remove(communityId);
+    return {
+      err: false,
+      msg: 'Miembro eliminado correctamente',
+      data: null,
+    };
+  }
 
-    @Delete(':id/miembros/:userId')
-    @ApiOperation({ summary: 'Eliminar miembro de comunidad' })
-    removeMember(
-        @Param('id', ParseIntPipe) communityId: number,
-        @Param('userId', ParseIntPipe) userId: number,
-        @Request() req: any
-    ) {
-        const executorId = req.user.id;
-      //  return this.communityService.remove(communityId, userId, executorId);
-    }
-
-    @Patch(':id/administradores/:userId')
-    @ApiOperation({ summary: 'Actualizar rol de miembro' })
-    toggleAdminRole(
-        @Param('id', ParseIntPipe) communityId: number,
-        @Param('userId', ParseIntPipe) userId: number,
-        @Body('rol') role: Role,
-        @Request() req: any
-    ) {
-        const executorId = req.user.id;
-       // return this.communityService.toggleAdminRole(communityId, userId, role, executorId);
-    }
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar comunidad' })
+  async deleteCommunity(@Param('id') id: string) {
+    const data = await this.communityService.remove(id);
+    return {
+      err: false,
+      msg: 'Comunidad eliminada correctamente',
+      data,
+    };
+  }
 }

@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 import { MembersSummary } from '../models/member.model';
 
 @Schema({ timestamps: true })
 export class Comunidades extends Document {
-  @Prop({ required: true })
+  @Prop({ required: true, trim: true })
   nombre: string;
 
   @Prop()

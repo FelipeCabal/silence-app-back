@@ -13,15 +13,15 @@ import {
 } from './entitesNosql/invitations.schema';
 import { ChatPrivado, ChatPrivadoSchema } from './entitesNosql/chats.schema';
 import { Mensajes, MensajesSchema } from './entities/mensajes.schema';
-import { chatPrivateController } from './chat-private/chat-private.controller';
-import { CommunityController } from './comunity/community.controller';
-import { GroupsController } from './groups/groups.controller';
 import { MessagesController } from './messages/messages.controller';
 import { PrivateChatsService } from './services/private-chats.service';
 import { GroupService } from './groups/groups.service';
 import { CommunityService } from './comunity/community.service';
 import { MessagesService } from './messages/message.service';
 import { MiembrosComunidades, MiembrosComunidadesSchema } from './entitesNosql/miembros-community.schema';
+import { ChatPrivateController } from './chat-private/chat-private.controller';
+import { GroupChatsController } from './controllers/group-chats.controller';
+import { ComunidadesController } from './controllers/comunity-chats.controller';
 
 @Module({
   imports: [
@@ -41,9 +41,9 @@ import { MiembrosComunidades, MiembrosComunidadesSchema } from './entitesNosql/m
     ]),
   ],
   controllers: [
-    chatPrivateController,
-    CommunityController,
-    GroupsController,
+    ChatPrivateController,
+    ComunidadesController,
+    GroupChatsController,
     MessagesController,
   ],
   providers: [

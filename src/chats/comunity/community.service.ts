@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Comunidades } from '../entitesNosql/community.schema';
 import { MiembrosComunidades } from '../entities/miembrosComunidad.entity';
-import { CreateComunidadDto } from './dto/create-community.dto';
 import { Role } from 'src/config/enums/roles.enum';
+import { CreateComunidadDto } from '../request/community.dto';
+import { ComunidadResponseDto } from '../response/community.response';
 
 @Injectable()
 export class CommunityService {
@@ -15,54 +20,62 @@ export class CommunityService {
     private readonly miembrosModel: Model<MiembrosComunidades>,
   ) {}
 
-  async create(dto: CreateComunidadDto, userId: string): Promise<Comunidades> {
-    const exists = await this.comunidadesModel.findOne({ nombre: dto.nombre });
-    if (exists) throw new ConflictException('Ya existe una comunidad con ese nombre.');
+  async create(dto: CreateComunidadDto, userId: string) {
+    const exists = await this.comunidadesModel.findOne({
+      nombre: dto.nombre.trim(),
+    });
+
+    if (exists)
+      throw new ConflictException('Ya existe una comunidad con ese nombre.');
 
     const comunidad = await this.comunidadesModel.create(dto);
 
     await this.miembrosModel.create({
       comunidad: comunidad._id,
-      usuario: new Types.ObjectId(userId),
+      usuarioSummary: { _id: new Types.ObjectId(userId) },
       rol: Role.Admin,
     });
 
-    return comunidad;
+    return ComunidadResponseDto.fromModel(comunidad);
   }
 
-  async findAll(): Promise<Comunidades[]> {
-    return this.comunidadesModel.find().populate('miembros');
+  async findAll() {
+    const comunidades = await this.comunidadesModel.find().lean();
+    return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
   }
 
-  async findById(id: string): Promise<Comunidades> {
-    const comunidad = await this.comunidadesModel
-      .findById(id)
-      .populate({ path: 'miembros', populate: { path: 'usuario' } 
-      });
-    if (!comunidad) throw new NotFoundException('Comunidad no encontrada.');
-    return comunidad;
-  }
+  async findById(id: string) {
+    const comunidad = await this.comunidadesModel.findById(id).lean();
 
-  async addMiembro(comunidadId: string, usuarioId: string): Promise<void> {
-    const comunidad = await this.comunidadesModel.findById(comunidadId);
     if (!comunidad) throw new NotFoundException('Comunidad no encontrada.');
 
-    const yaMiembro = await this.miembrosModel.findOne({
+    return ComunidadResponseDto.fromModel(comunidad);
+  }
+
+  async addMiembro(comunidadId: string, userId: string) {
+    const exists = await this.miembrosModel.findOne({
       comunidad: comunidadId,
-      usuario: usuarioId,
+      'usuarioSummary._id': userId,
     });
-    if (yaMiembro) throw new ConflictException('Ya eres miembro de esta comunidad.');
+
+    if (exists) {
+      throw new ConflictException('Ya es miembro de esta comunidad.');
+    }
 
     await this.miembrosModel.create({
       comunidad: comunidadId,
-      usuario: usuarioId,
+      usuarioSummary: { _id: new Types.ObjectId(userId) },
       rol: Role.Member,
     });
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string) {
     const deleted = await this.comunidadesModel.findByIdAndDelete(id);
+
     if (!deleted) throw new NotFoundException('Comunidad no encontrada.');
+
     await this.miembrosModel.deleteMany({ comunidad: id });
+
+    return { deleted: true };
   }
 }

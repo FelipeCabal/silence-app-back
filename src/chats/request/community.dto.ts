@@ -1,8 +1,7 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 
-export class CreateGrupoDto {
+export class CreateComunidadDto {
   @IsString()
-  @IsNotEmpty()
   nombre: string;
 
   @IsOptional()
