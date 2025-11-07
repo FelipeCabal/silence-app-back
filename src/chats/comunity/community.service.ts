@@ -6,10 +6,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Comunidades } from '../schemas/community.schema';
-import { MiembrosComunidades } from '../entities/miembrosComunidad.entity';
 import { Role } from 'src/config/enums/roles.enum';
 import { CreateComunidadDto } from '../request/community.dto';
 import { ComunidadResponseDto } from '../response/community.response';
+import { MiembrosComunidades } from '../schemas/miembros-community.schema';
 
 @Injectable()
 export class CommunityService {

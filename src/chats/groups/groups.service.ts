@@ -10,6 +10,7 @@ import { InvitacionesGrupos } from '../schemas/invitations.schema';
 import { Status } from 'src/config/enums/status.enum';
 import { CreateGrupoDto } from '../request/create-group.dto';
 import { GrupoResponseDto } from '../response/group.response';
+import { UserSummary } from 'src/users/entities/user.model';
 
 @Injectable()
 export class GroupService {
@@ -24,6 +25,7 @@ export class GroupService {
       ...dto,
       membersSummary: {
         _id: new Types.ObjectId(creatorId),
+        UserSummary,
       },
     });
 
@@ -37,12 +39,16 @@ export class GroupService {
     });
 
     if (exists) {
-      throw new ConflictException('Ya existe una invitación para este usuario.');
+      throw new ConflictException(
+        'Ya existe una invitación para este usuario.',
+      );
     }
 
     const invitacion = await this.invitacionesModel.create({
       user: userId,
       grupo: grupoId,
+      usuarioSummary: { _id: new Types.ObjectId(userId) },
+      groupSummary: { _id: new Types.ObjectId(grupoId) },
       status: Status.Pendiente,
     });
 

@@ -13,8 +13,8 @@ export class Grupos extends Document {
   @Prop()
   imagen?: string;
 
-  @Prop({ type: MembersSummary, required: true })
-  membersSummary: MembersSummary;
+  @Prop({ type: [MembersSummary], required: true ,default:[]})
+  membersSummary: MembersSummary[];
 }
 
 export const GruposSchema = SchemaFactory.createForClass(Grupos);
