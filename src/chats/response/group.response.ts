@@ -6,7 +6,7 @@ export class GrupoResponseDto {
   nombre: string;
   descripcion?: string;
   imagen?: string;
-  membersSummary: MembersSummary;
+  membersSummary: MembersSummary[];
 
   static fromModel(model: Grupos): GrupoResponseDto {
     return {

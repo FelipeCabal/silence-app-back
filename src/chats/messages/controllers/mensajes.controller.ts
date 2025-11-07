@@ -1,8 +1,8 @@
 import { Controller, Post, Body, UseGuards, Get, Param, ParseIntPipe, Delete, Req, Request } from '@nestjs/common';
 import { MessagesService } from '../services/mensajes.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { CreateMessageDto } from '../dto/mensajesDto/create-mensaje.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CreateMessageDto } from 'src/chats/dto/mensajesDto/create-mensaje.dto';
 
 @Controller('mensajes')
 @ApiTags('mensajes')

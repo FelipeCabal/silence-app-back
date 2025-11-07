@@ -15,7 +15,7 @@ import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 
 @Controller('chat-privado')
 @ApiTags('private-chats')
-@UseGuards(AuthGuard)
+//@UseGuards(AuthGuard)
 export class ChatPrivateController {
   constructor(private readonly chatPrivateService: ChatPrivateService) {}
 

@@ -25,7 +25,7 @@ export class ChatPrivateService {
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
     try {
       const friendship = await this.friendRequestModel.findById(dto.amistad).lean();
-
+      console.log(friendship)
       if (!friendship) {
         throw new NotFoundException('La solicitud de amistad no existe.');
       }
