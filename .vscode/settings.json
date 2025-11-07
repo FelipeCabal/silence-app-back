@@ -1,3 +1,9 @@
 {
     "material-icon-theme.activeIconPack": "nest",
+    "cSpell.words": [
+        "Anonimo",
+        "publicacion",
+        "Publicacion"
+    ],
+    "editor.formatOnSave": true,
 }

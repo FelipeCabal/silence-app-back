@@ -21,12 +21,12 @@ export class UsersController {
     return this.usersService.findAllUsers(userId, userQueries);
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new User' })
-  //@ApiResponse({ status: 200, description: '' })
-  async create(@Body() createUser: CreateUserDto) {
-    return this.usersService.createUser(createUser);
-  }
+  //@Post()
+  //@ApiOperation({ summary: 'Create a new User' })
+  ////@ApiResponse({ status: 200, description: '' })
+  //async create(@Body() createUser: CreateUserDto) {
+  //  return this.usersService.createUser(createUser);
+  //}
 
   @Get(':id/friends')
   @ApiOperation({ summary: "Get all friends from an user" })
@@ -40,14 +40,14 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get an User' })
-  async findOne(@Param('id') id: number) {
+  async findOne(@Param('id') id: string) {
     return this.usersService.findOneUser(id);
   }
 
 
   @Patch(':id')
   @ApiOperation({ summary: "Update the User's info" })
-  async update(@Param('id') id: number, @Body() updateUser: UpdateUserDto) {
+  async update(@Param('id') id: string, @Body() updateUser: UpdateUserDto) {
     return this.usersService.update(id, updateUser);
   }
 
@@ -55,6 +55,6 @@ export class UsersController {
   @Delete(':id')
   @ApiOperation({ summary: "Delete an User" })
   async remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+    return this.usersService.remove(id);
   }
 }

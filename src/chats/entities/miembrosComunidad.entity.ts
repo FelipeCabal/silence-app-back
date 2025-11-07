@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, Column } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
 import { Role } from 'src/config/enums/roles.enum';
 import { Comunidades } from './chats.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Entity('miembros_comunidades')
 export class MiembrosComunidades {

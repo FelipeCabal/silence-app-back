@@ -24,4 +24,5 @@ export class InvitacionesGrupos extends Document {
   status: Status;
 }
 
-export const InvitacionesGruposSchema = SchemaFactory.createForClass(InvitacionesGrupos);
+export const InvitacionesGruposSchema =
+  SchemaFactory.createForClass(InvitacionesGrupos);

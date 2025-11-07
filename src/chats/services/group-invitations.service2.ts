@@ -12,6 +12,8 @@ import { InvitacionGrupoResponseDto } from '../dto/invitation/response/Invitacio
 import { UsersService } from 'src/users/services/users.service';
 import { GroupChatsService } from './gruop-chats.service';
 import { Status } from 'src/config/enums/status.enum';
+import { GroupInvitationsModule } from '../module/GroupInvitationsModule';
+import { InvitacionSimpleModel } from '../models/InvitacionSimpleModel';
 
 @Injectable()
 export class GroupInvitationsService {
@@ -22,11 +24,14 @@ export class GroupInvitationsService {
     private readonly groupService: GroupChatsService,
   ) {}
 
-  async create(data: CreateInvitationDto): Promise<InvitacionGrupoResponseDto> {
+  async create(data: CreateInvitationDto): Promise<InvitacionSimpleModel> {
     const { senderId, receiverId, groupId } = data;
 
     if (senderId === receiverId) {
-      throw new HttpException('No puedes invitarte a ti mismo', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'No puedes invitarte a ti mismo',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const sender = await this.usersService.findOneUser(senderId);
@@ -34,7 +39,10 @@ export class GroupInvitationsService {
     const group = await this.groupService.findGroupById(groupId);
 
     if (group.miembros.some((miembro) => miembro.toString() === receiverId)) {
-      throw new HttpException('El usuario ya está en el grupo', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'El usuario ya está en el grupo',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const existing = await this.groupInvitationModel.findOne({
@@ -44,19 +52,28 @@ export class GroupInvitationsService {
     });
 
     if (existing) {
-      throw new HttpException('Ya existe una invitación pendiente', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Ya existe una invitación pendiente',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const newInvitation = await this.groupInvitationModel.create({
       userId: receiver._id,
-      grupoId: group._id,
+      userName: receiver.userName,
+      userImage: receiver.imagen,
+      grupoId: group.id,
+      grupoNombre: group.nombre,
       status: Status.Pendiente,
     });
 
-    return InvitacionGrupoResponseDto.fromModel(newInvitation);
+    return InvitacionSimpleModel.fromEntity(newInvitation);
   }
 
-  async accept(invitationId: string, userId: string): Promise<InvitacionGrupoResponseDto> {
+  async accept(
+    invitationId: string,
+    userId: string,
+  ): Promise<InvitacionGrupoResponseDto> {
     const invitation = await this.groupInvitationModel.findById(invitationId);
 
     if (!invitation) {
@@ -64,17 +81,26 @@ export class GroupInvitationsService {
     }
 
     if (invitation.status !== Status.Pendiente) {
-      throw new HttpException('La invitación ya fue procesada', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'La invitación ya fue procesada',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     if (invitation.userId.toString() !== userId) {
-      throw new HttpException('No estás autorizado para aceptar esta invitación', HttpStatus.UNAUTHORIZED);
+      throw new HttpException(
+        'No estás autorizado para aceptar esta invitación',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     invitation.status = Status.Aceptada;
     await invitation.save();
 
-    await this.groupService.addUserToGroup(invitation.grupoId.toString(), invitation.userId);
+    await this.groupService.addUserToGroup(
+      invitation.grupoId.toString(),
+      invitation.userId,
+    );
 
     return InvitacionGrupoResponseDto.fromModel(invitation);
   }
@@ -87,24 +113,27 @@ export class GroupInvitationsService {
     }
 
     if (invitation.userId.toString() !== userId) {
-      throw new HttpException('No estás autorizado para rechazar esta invitación', HttpStatus.UNAUTHORIZED);
+      throw new HttpException(
+        'No estás autorizado para rechazar esta invitación',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     await this.groupInvitationModel.deleteOne({ _id: invitationId });
   }
 
-  async findByUser(userId: string): Promise<InvitacionGrupoResponseDto[]> {
+  async findByUser(userId: string): Promise<InvitacionSimpleModel[]> {
     const invitations = await this.groupInvitationModel.find({ userId });
-    return invitations.map((inv) => InvitacionGrupoResponseDto.fromModel(inv));
+    return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
 
-  async findOne(id: string): Promise<InvitacionGrupoResponseDto | null> {
+  async findOne(id: string): Promise<InvitacionSimpleModel | null> {
     const invitation = await this.groupInvitationModel.findById(id);
-    return invitation ? InvitacionGrupoResponseDto.fromModel(invitation) : null;
+    return invitation ? InvitacionSimpleModel.fromEntity(invitation) : null;
   }
 
-  async findSimpleByUser(userId: string): Promise<InvitacionGrupoResponseDto[]> {
+  async findSimpleByUser(userId: string): Promise<GroupInvitationsModule[]> {
     const invitations = await this.groupInvitationModel.find({ userId });
-    return invitations.map((inv) => InvitacionGrupoResponseDto.fromModel(inv));
+    return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
 }

@@ -1,19 +1,31 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { UsersService } from './services/users.service';
 import { UsersController } from './controllers/users.controller';
-import { User } from './entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SolicitudAmistad } from './entities/solicitud.entity';
 import { SolicitudesController } from './controllers/solicitudes.controller';
 import { SolicitudesAmistadService } from './services/solicitudesAmistad.service';
 import { ChatsModule } from 'src/chats/chats.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { userModelSchema, UserSchema } from './entities/users.schema';
+import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema';
+import { User } from './entities/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, SolicitudAmistad]),
+  imports: [TypeOrmModule.forFeature([User]),
+  MongooseModule.forFeature([
+    {
+      name: UserSchema.name,
+      schema: userModelSchema,
+    },
+    {
+      name: FriendRequest.name,
+      schema: FriendRequestSchema
+    }
+  ]),
   forwardRef(() => ChatsModule),
   ],
   controllers: [UsersController, SolicitudesController],
   providers: [UsersService, SolicitudesAmistadService],
-  exports: [TypeOrmModule, SolicitudesAmistadService, UsersService]
+  exports: [TypeOrmModule, MongooseModule, SolicitudesAmistadService, UsersService]
 })
 export class UsersModule { }

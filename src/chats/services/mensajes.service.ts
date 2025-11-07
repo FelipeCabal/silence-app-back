@@ -8,7 +8,6 @@ import { PrivateChatsService } from './private-chats.service';
 import { Role } from 'src/config/enums/roles.enum';
 import { GroupChatsService } from './gruop-chats.service';
 import { ComunidadesService } from './comunity-chats.service';
-import { throwError } from 'rxjs';
 
 @Injectable()
 export class MessagesService {
@@ -66,48 +65,48 @@ export class MessagesService {
         }));
     }
 
-    async ClearChat(chatId: number, userId: number, ChatType: string): Promise<{ deletedCount: number }> {
+    async ClearChat(chatId: number, userId: String, ChatType: string) {
 
-        if (ChatType === 'private') {
-            const chat = await this.privateChatsService.findOne(chatId);
-
-            if (chat.amistad.userEnvia.id !== userId && chat.amistad.userRecibe.id !== userId) {
-                throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-            }
-
-            const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
-
-            return { deletedCount: deletedMessages.deletedCount };
-
-        } else if (ChatType === 'group') {
-            const chat = await this.groupChatService.findGroupById(chatId);
-
-            const isMember = chat.miembros.some((member) => member.id === userId);
-            if (!isMember) {
-                throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
-            }
-
-            const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
-
-            return { deletedCount: deletedMessages.deletedCount }
-
-        } else if (ChatType === 'community') {
-            const chat = await this.comunidadesService.findCommunityById(chatId);
-
-            const isOwner = chat.miembros.some((member) => member.rol === Role.Owner && member.id === userId);
-            const isAdmin = chat.miembros.some((member) => member.rol === Role.Admin && member.id === userId);
-
-            if (!isOwner && !isAdmin) {
-                throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-            }
-
-            const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
-
-            return { deletedCount: deletedMessages.deletedCount }
-        } else {
-            throw new HttpException('No tienes permiso para eliminar mensajes en este chat', HttpStatus.UNAUTHORIZED);
-
-        }
+        //  if (ChatType === 'private') {
+        //      const chat = await this.privateChatsService.findOne(chatId);
+        //
+        //      if (chat.amistad.userEnvia.id.toString() !== userId && chat.amistad.userRecibe.id.toString() !== userId) {
+        //          throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        //      }
+        //
+        //      const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
+        //
+        //      return { deletedCount: deletedMessages.deletedCount };
+        //
+        //  } else if (ChatType === 'group') {
+        //      const chat = await this.groupChatService.findGroupById(chatId);
+        //
+        //      const isMember = chat.miembros.some((member) => member.id === userId);
+        //      if (!isMember) {
+        //          throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+        //      }
+        //
+        //      const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
+        //
+        //      return { deletedCount: deletedMessages.deletedCount }
+        //
+        //  } else if (ChatType === 'community') {
+        //      const chat = await this.comunidadesService.findCommunityById(chatId);
+        //
+        //      const isOwner = chat.miembros.some((member) => member.rol === Role.Owner && member.id.toString() === userId);
+        //      const isAdmin = chat.miembros.some((member) => member.rol === Role.Admin && member.id.toString() === userId);
+        //
+        //      if (!isOwner && !isAdmin) {
+        //          throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        //      }
+        //
+        //      const deletedMessages = await this.mensajeModel.deleteMany({ chatId });
+        //
+        //      return { deletedCount: deletedMessages.deletedCount }
+        //  } else {
+        //      throw new HttpException('No tienes permiso para eliminar mensajes en este chat', HttpStatus.UNAUTHORIZED);
+        //
+        //  }
 
     }
 }
