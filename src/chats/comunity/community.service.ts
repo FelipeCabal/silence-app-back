@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Comunidades } from '../entitesNosql/community.schema';
+import { Comunidades } from '../schemas/community.schema';
 import { MiembrosComunidades } from '../entities/miembrosComunidad.entity';
 import { Role } from 'src/config/enums/roles.enum';
 import { CreateComunidadDto } from '../request/community.dto';

@@ -1,4 +1,4 @@
-import { Comunidades } from "../entitesNosql/community.schema";
+import { Comunidades } from "../schemas/community.schema";
 import { MembersSummary } from "../models/member.model";
 
 export class ComunidadResponseDto {

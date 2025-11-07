@@ -1,4 +1,4 @@
-import { Grupos } from "../entitesNosql/groups.schema";
+import { Grupos } from "../schemas/groups.schema";
 import { MembersSummary } from "../models/member.model";
 
 export class GrupoResponseDto {

@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Grupos } from '../entitesNosql/groups.schema';
-import { InvitacionesGrupos } from '../entitesNosql/invitations.schema';
+import { Grupos } from '../schemas/groups.schema';
+import { InvitacionesGrupos } from '../schemas/invitations.schema';
 import { Status } from 'src/config/enums/status.enum';
 import { CreateGrupoDto } from '../request/create-group.dto';
 import { GrupoResponseDto } from '../response/group.response';

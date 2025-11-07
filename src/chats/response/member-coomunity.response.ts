@@ -1,6 +1,6 @@
 import { Role } from 'src/config/enums/roles.enum';
 import { UserSummary } from '../../users/entities/user.model';
-import { MiembrosComunidades } from '../entitesNosql/miembros-community.schema';
+import { MiembrosComunidades } from '../schemas/miembros-community.schema';
 
 export class MiembroComunidadResponseDto {
   id: string;

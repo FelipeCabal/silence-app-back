@@ -11,7 +11,6 @@ import {
 import { ChatPrivateService } from './chat-private.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ReponseData } from './response.interface';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 
 @Controller('chat-privado')
@@ -35,7 +34,7 @@ export class ChatPrivateController {
   @ApiOperation({ summary: 'Listar chats privados del usuario' })
   async findAllByUser(
     @Query('userId') userId: string,
-  ): Promise<ReponseData> {
+  ): Promise<any> {
     const data = await this.chatPrivateService.findAllByUser(userId);
     return {
       err: false,

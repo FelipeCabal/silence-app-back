@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ChatPrivado } from '../entitesNosql/chats.schema';
+import { ChatPrivado } from '../schemas/chats.schema';
 import { ChatPrivadoResponseDto } from '../response/chat-private.response';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 import { FriendRequest } from 'src/users/entities/solicitud.model';
@@ -45,8 +45,11 @@ export class ChatPrivateService {
       }
 
       const chat = await this.chatPrivadoModel.create({
-        usuario1,
-        usuario2,
+        amistadSummary: {
+          _id: friendship._id,
+          usuario1,
+          usuario2,
+        },
         lastMessage: dto.lastMessage ?? null,
       });
 
@@ -68,8 +71,8 @@ export class ChatPrivateService {
     const chats = await this.chatPrivadoModel
       .find({
         $or: [
-          { 'usuario1._id': new Types.ObjectId(userId) },
-          { 'usuario2._id': new Types.ObjectId(userId) },
+          { 'amistadSummary.usuario1': new Types.ObjectId(userId) },
+          { 'amistadSummary.usuario2': new Types.ObjectId(userId) },
         ],
       })
       .sort({ updatedAt: -1 })
