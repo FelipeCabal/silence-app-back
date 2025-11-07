@@ -15,7 +15,7 @@ export class SolicitudesController {
     @Post('request/:userRecibeId')
     @ApiOperation({ summary: 'Send friends request' })
     async FriendRequestSent(
-        @Param('userRecibeId') userRecibeId: number,
+        @Param('userRecibeId') userRecibeId: string,
         @Request() req: any
     ) {
         const userEnviaId = req.user.id
@@ -41,24 +41,30 @@ export class SolicitudesController {
         return this.solicitudesAmistadService.findAllReceiveRequest(userId);
     }
 
-    @Patch('request/:requestId/status')
+    @Get('user/accepted')
+    @ApiOperation({ summary: 'requested accepted' })
+    async acceptedRequest(
+        @Request() req: any
+    ) {
+        const userId = req.user.id
+        return this.solicitudesAmistadService.findAcceptedFriendships(userId);
+    }
+
+    @Patch('update/:requestId')
     @ApiOperation({ summary: 'update status from friend request' })
-    async updateRequestStatus(
-        @Param('requestId') requestId: number,
+    async acceptRequestStatus(
+        @Param('requestId') requestId: string,
         @Request() req: any,
         @Body('newStatus') newStatus: Status
     ) {
         const userId = req.user.id
-        if (!Object.values(Status).includes(newStatus)) {
-            throw new HttpException('Invalid status', HttpStatus.BAD_REQUEST);
-        }
         return this.solicitudesAmistadService.updateRequest(requestId, userId, newStatus);
     }
 
     @Delete(':requestId')
     @ApiOperation({ summary: 'delete a friend request' })
     async deleteRequest(
-        @Param('requestId') requestId: number,
+        @Param('requestId') requestId: string,
         @Request() req: any
     ) {
         const userId = req.user.id

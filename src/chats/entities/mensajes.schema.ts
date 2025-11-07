@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 @Schema({ timestamps: true })
 export class Mensajes extends Document {
     @Prop({ required: true })
-    usuarioId: number;
+    usuarioId: string;
 
     @Prop({ required: true, trim: true })
     message: string;

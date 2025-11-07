@@ -19,7 +19,7 @@ export class ComunidadesService {
         private readonly usersService: UsersService,
     ) { }
 
-    async create(createCommunityDto: Partial<Comunidades>, ownerId: number): Promise<Comunidades> {
+    async create(createCommunityDto: Partial<Comunidades>, ownerId: string): Promise<Comunidades> {
         const owner = await this.usersService.findOneUser(ownerId)
 
         const newCommunity = this.comunidadesRepository.create({
@@ -92,25 +92,25 @@ export class ComunidadesService {
     }
 
 
-    async addMember(communityId: number, userId: number): Promise<void> {
-        const comunidad = await this.findCommunityById(communityId);
-        const user = await this.usersService.findOneUser(userId)
-
-        const existingMember = await this.miembrosRepository.findOne({
-            where: { comunidad: { id: communityId }, usuario: { id: userId } },
-        });
-
-        if (existingMember) {
-            throw new ForbiddenException('El usuario ya es miembro de la comunidad.');
-        }
-
-        const newMember = this.miembrosRepository.create({
-            comunidad,
-            usuario: user,
-            rol: Role.Member,
-        });
-
-        await this.miembrosRepository.save(newMember);
+    async addMember(communityId: number, userId: string): Promise<void> {
+        // const comunidad = await this.findCommunityById(communityId);
+        // const user = await this.usersService.findOneUser(userId)
+        //
+        // const existingMember = await this.miembrosRepository.findOne({
+        //     where: { comunidad: { id: communityId }, usuario: { id: userId } },
+        // });
+        //
+        // if (existingMember) {
+        //     throw new ForbiddenException('El usuario ya es miembro de la comunidad.');
+        // }
+        //
+        // const newMember = this.miembrosRepository.create({
+        //     comunidad,
+        //     usuario: user,
+        //     rol: Role.Member,
+        // });
+        //
+        // await this.miembrosRepository.save(newMember);
     }
 
     async removeMember(communityId: number, userId: number, executorId: number): Promise<void> {
