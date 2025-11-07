@@ -6,14 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { InvitacionesGrupos } from '../entities/invitaciones.schema';
-import { CreateInvitationDto } from '../dto/invitation/request/CreateInvitationDto';
-import { InvitacionGrupoResponseDto } from '../dto/invitation/response/InvitacionGrupoResponseDto';
+import { InvitacionesGrupos } from 'src/chats/schemas/invitations.schema';
+import { CreateInvitationDto } from 'src/chats/dto/invitation/request/CreateInvitationDto';
 import { UsersService } from 'src/users/services/users.service';
-import { GroupChatsService } from './gruop-chats.service';
 import { Status } from 'src/config/enums/status.enum';
-import { GroupInvitationsModule } from '../module/GroupInvitationsModule';
-import { InvitacionSimpleModel } from '../models/InvitacionSimpleModel';
+import { GroupInvitationsModule } from 'src/chats/module/GroupInvitationsModule';
+import { InvitacionSimpleModel } from 'src/chats/models/InvitacionSimpleModel';
+import { GroupService } from 'src/chats/groups/groups.service';
 
 @Injectable()
 export class GroupInvitationsService {
@@ -21,7 +20,7 @@ export class GroupInvitationsService {
     @InjectModel(InvitacionesGrupos.name)
     private readonly groupInvitationModel: Model<InvitacionesGrupos>,
     private readonly usersService: UsersService,
-    private readonly groupService: GroupChatsService,
+    private readonly groupService: GroupService,
   ) {}
 
   async create(data: CreateInvitationDto): Promise<InvitacionSimpleModel> {
@@ -36,9 +35,9 @@ export class GroupInvitationsService {
 
     const sender = await this.usersService.findOneUser(senderId);
     const receiver = await this.usersService.findOneUser(receiverId);
-    const group = await this.groupService.findGroupById(groupId);
+    const group = await this.groupService.findById(groupId);
 
-    if (group.miembros.some((miembro) => miembro.toString() === receiverId)) {
+    if (group.membersSummary.some((m) => m._id.toString() === receiverId)) {
       throw new HttpException(
         'El usuario ya está en el grupo',
         HttpStatus.BAD_REQUEST,
@@ -46,8 +45,8 @@ export class GroupInvitationsService {
     }
 
     const existing = await this.groupInvitationModel.findOne({
-      userId: receiver._id,
-      grupoId: group._id,
+      'usuarioSummary._id': receiver._id,
+      'groupSummary._id': group.id,
       status: Status.Pendiente,
     });
 
@@ -59,11 +58,16 @@ export class GroupInvitationsService {
     }
 
     const newInvitation = await this.groupInvitationModel.create({
-      userId: receiver._id,
-      userName: receiver.userName,
-      userImage: receiver.imagen,
-      grupoId: group.id,
-      grupoNombre: group.nombre,
+      usuarioSummary: {
+        _id: receiver._id,
+        nombre: receiver.nombre,
+        imagen: receiver.imagen,
+      },
+      groupSummary: {
+        _id: group.id,
+        nombre: group.nombre,
+        imagen: group.imagen,
+      },
       status: Status.Pendiente,
     });
 
@@ -73,7 +77,7 @@ export class GroupInvitationsService {
   async accept(
     invitationId: string,
     userId: string,
-  ): Promise<InvitacionGrupoResponseDto> {
+  ): Promise<InvitacionSimpleModel> {
     const invitation = await this.groupInvitationModel.findById(invitationId);
 
     if (!invitation) {
@@ -87,7 +91,7 @@ export class GroupInvitationsService {
       );
     }
 
-    if (invitation.userId.toString() !== userId) {
+    if (invitation.usuarioSummary._id.toString() !== userId) {
       throw new HttpException(
         'No estás autorizado para aceptar esta invitación',
         HttpStatus.UNAUTHORIZED,
@@ -98,11 +102,11 @@ export class GroupInvitationsService {
     await invitation.save();
 
     await this.groupService.addUserToGroup(
-      invitation.grupoId.toString(),
-      invitation.userId,
+      invitation.groupSummary._id.toString(),
+      invitation.usuarioSummary._id,
     );
 
-    return InvitacionGrupoResponseDto.fromModel(invitation);
+    return InvitacionSimpleModel.fromEntity(invitation);
   }
 
   async reject(invitationId: string, userId: string): Promise<void> {
@@ -112,7 +116,7 @@ export class GroupInvitationsService {
       throw new NotFoundException('Invitación no encontrada');
     }
 
-    if (invitation.userId.toString() !== userId) {
+    if (invitation.usuarioSummary._id.toString() !== userId) {
       throw new HttpException(
         'No estás autorizado para rechazar esta invitación',
         HttpStatus.UNAUTHORIZED,
@@ -123,7 +127,9 @@ export class GroupInvitationsService {
   }
 
   async findByUser(userId: string): Promise<InvitacionSimpleModel[]> {
-    const invitations = await this.groupInvitationModel.find({ userId });
+    const invitations = await this.groupInvitationModel.find({
+      'usuarioSummary._id': userId,
+    });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
 
@@ -132,8 +138,10 @@ export class GroupInvitationsService {
     return invitation ? InvitacionSimpleModel.fromEntity(invitation) : null;
   }
 
-  async findSimpleByUser(userId: string): Promise<GroupInvitationsModule[]> {
-    const invitations = await this.groupInvitationModel.find({ userId });
+  async findSimpleByUser(userId: string): Promise<InvitacionSimpleModel[]> {
+    const invitations = await this.groupInvitationModel.find({
+      'usuarioSummary._id': userId,
+    });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
 }

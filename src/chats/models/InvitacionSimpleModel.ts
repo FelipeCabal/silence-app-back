@@ -1,25 +1,24 @@
 import { Types } from 'mongoose';
 import { Status } from 'src/config/enums/status.enum';
-import { UserSummaryModel } from './user-summary.model';
+import { UserSummary } from 'src/users/entities/user.model';
+import { GroupSummary } from './groups.model';
 
 export class InvitacionSimpleModel {
   _id: Types.ObjectId;
-  user: UserSummaryModel;
-  grupoNombre: string;
+  usuarioSummary: UserSummary;
+  groupSummary: GroupSummary;
   status: Status;
   createdAt: Date;
 
   static fromEntity(entity: any): InvitacionSimpleModel {
     const model = new InvitacionSimpleModel();
+
     model._id = entity._id;
-    model.user = UserSummaryModel.fromSnapshot({
-      userId: entity.userId,
-      userName: entity.userName,
-      imagen: entity.userImage,
-    });
-    model.grupoNombre = entity.grupoNombre;
+    model.usuarioSummary = entity.usuarioSummary;
+    model.groupSummary = entity.groupSummary;
     model.status = entity.status;
     model.createdAt = entity.createdAt;
+
     return model;
   }
 }

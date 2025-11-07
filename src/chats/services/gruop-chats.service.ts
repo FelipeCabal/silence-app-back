@@ -1,4 +1,4 @@
-import {
+/* import {
   HttpException,
   HttpStatus,
   Injectable,
@@ -89,19 +89,19 @@ export class GroupChatsService {
 
     return group;
   }
+ */
+/*   async addUserToGroup(groupId: number, user: UserSchema) { */
+//  const group = await this.findGroupById(groupId);
+//
+//  if (group.miembros.some((miembro) => miembro.id === user.id)) {
+//      throw new NotFoundException(`El usuario ya pertenece al grupo.`);
+//  }
+//
+//  group.miembros.push(user);
+//  return await this.groupRepository.save(group);
+/*   } */
 
-  async addUserToGroup(groupId: number, user: UserSchema) {
-    //  const group = await this.findGroupById(groupId);
-    //
-    //  if (group.miembros.some((miembro) => miembro.id === user.id)) {
-    //      throw new NotFoundException(`El usuario ya pertenece al grupo.`);
-    //  }
-    //
-    //  group.miembros.push(user);
-    //  return await this.groupRepository.save(group);
-  }
-
-  /* async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {
+/* async removeUserFromGroup(groupId: number, userId: String): Promise<Grupos> {
          const group = await this.findGroupById(groupId);
          const user = group.miembros.find((miembro) => miembro.id === userId);
  
@@ -124,4 +124,4 @@ export class GroupChatsService {
          const group = await this.findGroupById(id);
          await this.groupRepository.remove(group);
      } */
-}
+/* } */

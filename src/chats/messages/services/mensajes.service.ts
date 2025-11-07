@@ -1,22 +1,22 @@
 import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Mensajes } from '../entities/mensajes.schema';
 import { UsersService } from 'src/users/services/users.service';
-import { CreateMessageDto } from '../dto/mensajesDto/create-mensaje.dto';
-import { PrivateChatsService } from './private-chats.service';
 import { Role } from 'src/config/enums/roles.enum';
-import { GroupChatsService } from './gruop-chats.service';
-import { ComunidadesService } from './comunity-chats.service';
+import { Mensajes } from 'src/chats/schemas/mensajes.schema';
+import { ChatPrivateService } from 'src/chats/chat-private/chat-private.service';
+import { GroupService } from 'src/chats/groups/groups.service';
+import { CommunityService } from 'src/chats/comunity/community.service';
+import { CreateMessageDto } from 'src/chats/dto/mensajesDto/create-mensaje.dto';
 
 @Injectable()
 export class MessagesService {
     constructor(
         @InjectModel(Mensajes.name) private mensajeModel: Model<Mensajes>,
         private readonly usersService: UsersService, // Inyectamos el servicio de usuarios
-        private readonly privateChatsService: PrivateChatsService,
-        private readonly groupChatService: GroupChatsService,
-        private readonly comunidadesService: ComunidadesService
+        private readonly privateChatsService: ChatPrivateService,
+        private readonly groupChatService: GroupService,
+        private readonly comunidadesService: CommunityService
     ) { }
 
     // Crear un nuevo mensaje y asociarlo al usuario

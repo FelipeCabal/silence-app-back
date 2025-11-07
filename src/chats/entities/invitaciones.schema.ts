@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+/* import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Status } from 'src/config/enums/status.enum';
 
@@ -26,3 +26,4 @@ export class InvitacionesGrupos extends Document {
 
 export const InvitacionesGruposSchema =
   SchemaFactory.createForClass(InvitacionesGrupos);
+ */

@@ -1,4 +1,4 @@
-import {
+/* import {
   Column,
   Entity,
   JoinColumn,
@@ -9,7 +9,7 @@ import {
   PrimaryColumnCannotBeNullableError,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-/* import { InvitacionesGrupos } from "./invitaciones.entity"; */
+
 import { InvitacionesGrupos } from './invitaciones.schema';
 import { SolicitudAmistad } from 'src/users/entities/solicitud.entity';
 import { MiembrosComunidades } from './miembrosComunidad.entity';
@@ -73,3 +73,4 @@ export class Comunidades {
   })
   miembros: MiembrosComunidades[];
 }
+ */

@@ -1,10 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { InvitacionesGrupos, InvitacionesGruposSchema } from '../entities/invitaciones.schema';
-import { GroupInvitationsService } from '../services/group-invitations.service2';
-import { InvitationsGroupController } from '../controllers/group-invitations2.controoller';
+
 import { UsersModule } from 'src/users/users.module';
-import { GroupChatsModule } from './group-chats.module';
+import { InvitationsGroupController } from '../controllers/group-invitations.controller';
+import { GroupInvitationsService } from '../messages/services/group-invitations.service2';
+import {
+  InvitacionesGrupos,
+  InvitacionesGruposSchema,
+} from '../schemas/invitations.schema';
 
 @Module({
   imports: [
@@ -12,7 +15,7 @@ import { GroupChatsModule } from './group-chats.module';
       { name: InvitacionesGrupos.name, schema: InvitacionesGruposSchema },
     ]),
     forwardRef(() => UsersModule),
-    forwardRef(() => GroupChatsModule),
+    /*     forwardRef(() => GroupChatsModule), */
   ],
   controllers: [InvitationsGroupController],
   providers: [GroupInvitationsService],
