@@ -10,7 +10,6 @@ import { InvitacionesGrupos } from 'src/chats/schemas/invitations.schema';
 import { CreateInvitationDto } from 'src/chats/dto/invitation/request/CreateInvitationDto';
 import { UsersService } from 'src/users/services/users.service';
 import { Status } from 'src/config/enums/status.enum';
-import { GroupInvitationsModule } from 'src/chats/module/GroupInvitationsModule';
 import { InvitacionSimpleModel } from 'src/chats/models/InvitacionSimpleModel';
 import { GroupService } from 'src/chats/groups/groups.service';
 
