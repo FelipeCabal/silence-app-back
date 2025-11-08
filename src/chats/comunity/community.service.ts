@@ -21,40 +21,39 @@ export class CommunityService {
   ) {}
 
   async create(dto: CreateComunidadDto, userId: string) {
-  const exists = await this.comunidadesModel.findOne({
-    nombre: dto.nombre.trim(),
-  });
+    const exists = await this.comunidadesModel.findOne({
+      nombre: dto.nombre.trim(),
+    });
 
-  if (exists) {
-    throw new ConflictException('Ya existe una comunidad con ese nombre.');
+    if (exists) {
+      throw new ConflictException('Ya existe una comunidad con ese nombre.');
+    }
+
+    const user = await this.miembrosModel.db
+      .collection('users')
+      .findOne({ _id: new Types.ObjectId(userId) });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const miembroSummary = {
+      _id: user._id,
+      nombre: user.nombre,
+      avatar: user.avatar ?? null,
+    };
+
+    const comunidad = await this.comunidadesModel.create({
+      ...dto,
+      miembrosSummary: [miembroSummary],
+    });
+
+    await this.miembrosModel.create({
+      comunidad: comunidad._id,
+      usuarioSummary: miembroSummary,
+      rol: Role.Admin,
+    });
+
+    return ComunidadResponseDto.fromModel(comunidad);
   }
-
-  const user = await this.miembrosModel.db
-    .collection('users')
-    .findOne({ _id: new Types.ObjectId(userId) });
-
-  if (!user) throw new NotFoundException('Usuario no encontrado');
-
-  const miembroSummary = {
-    _id: user._id,
-    nombre: user.nombre,
-    avatar: user.avatar ?? null,
-  };
-
-  const comunidad = await this.comunidadesModel.create({
-    ...dto,
-    miembrosSummary: [miembroSummary],
-  });
-
-  await this.miembrosModel.create({
-    comunidad: comunidad._id,
-    usuarioSummary: miembroSummary,
-    rol: Role.Admin,
-  });
-
-  return ComunidadResponseDto.fromModel(comunidad);
-}
-
 
   async findAll() {
     const comunidades = await this.comunidadesModel.find().lean();
@@ -70,48 +69,74 @@ export class CommunityService {
   }
 
   async addMiembro(comunidadId: string, userId: string) {
-  const exists = await this.miembrosModel.findOne({
-    comunidad: new Types.ObjectId(comunidadId),
-    'usuarioSummary._id': new Types.ObjectId(userId),
-  });
+    const exists = await this.miembrosModel.findOne({
+      comunidad: new Types.ObjectId(comunidadId),
+      'usuarioSummary._id': new Types.ObjectId(userId),
+    });
 
-  if (exists) {
-    throw new ConflictException('Ya es miembro de esta comunidad.');
+    if (exists) {
+      throw new ConflictException('Ya es miembro de esta comunidad.');
+    }
+
+    const user = await this.miembrosModel.db
+      .collection('users')
+      .findOne({ _id: new Types.ObjectId(userId) });
+
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
+    const userSummary = {
+      _id: user._id,
+      nombre: user.nombre,
+      avatar: user.avatar ?? null,
+    };
+
+    await this.miembrosModel.create({
+      comunidad: new Types.ObjectId(comunidadId),
+      usuarioSummary: userSummary,
+      rol: Role.Member,
+    });
+
+    await this.comunidadesModel.updateOne(
+      { _id: new Types.ObjectId(comunidadId) },
+      { $push: { miembrosSummary: userSummary } },
+    );
+
+    return { message: 'Miembro agregado exitosamente' };
   }
 
-  const user = await this.miembrosModel.db
-    .collection('users')
-    .findOne({ _id: new Types.ObjectId(userId) });
+  async remove(comunidadId: string, userId: string) {
+    const comunidad = await this.comunidadesModel.findById(comunidadId);
 
-  if (!user) throw new NotFoundException('Usuario no encontrado');
+    if (!comunidad) throw new NotFoundException('Comunidad no encontrada');
 
-  const userSummary = {
-    _id: user._id,
-    nombre: user.nombre,
-    avatar: user.avatar ?? null,
-  };
+    const deletedMember = await this.miembrosModel.findOneAndDelete({
+      comunidad: new Types.ObjectId(comunidadId),
+      'usuarioSummary._id': new Types.ObjectId(userId),
+    });
 
-  await this.miembrosModel.create({
-    comunidad: new Types.ObjectId(comunidadId),
-    usuarioSummary: userSummary,
-    rol: Role.Member,
-  });
+    if (!deletedMember) {
+      throw new NotFoundException('El usuario no es miembro de esta comunidad');
+    }
 
-  await this.comunidadesModel.updateOne(
-    { _id: new Types.ObjectId(comunidadId) },
-    { $push: { miembrosSummary: userSummary } },
-  );
+    await this.comunidadesModel.updateOne(
+      { _id: new Types.ObjectId(comunidadId) },
+      { $pull: { miembrosSummary: { _id: new Types.ObjectId(userId) } } },
+    );
 
-  return { message: 'Miembro agregado exitosamente' };
-}
+    return { removed: true };
+  }
 
+  async removeCommunity(comunidadId: string) {
+    const comunidad = await this.comunidadesModel.findById(comunidadId);
+    if (!comunidad) {
+      throw new NotFoundException('Comunidad no encontrada.');
+    }
 
-  async remove(id: string) {
-    const deleted = await this.comunidadesModel.findByIdAndDelete(id);
+    await this.miembrosModel.deleteMany({
+      comunidad: comunidadId,
+    });
 
-    if (!deleted) throw new NotFoundException('Comunidad no encontrada.');
-
-    await this.miembrosModel.deleteMany({ comunidad: id });
+    await this.comunidadesModel.findByIdAndDelete(comunidadId);
 
     return { deleted: true };
   }

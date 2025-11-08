@@ -10,4 +10,7 @@ export class MembersSummary {
 
   @Prop()
   avatar?: string;
+
+  @Prop()
+  rol?:string
 }
