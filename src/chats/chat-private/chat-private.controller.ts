@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ChatPrivateService } from './chat-private.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 
 @Controller('chat-privado')
@@ -20,6 +20,7 @@ export class ChatPrivateController {
   constructor(private readonly chatPrivateService: ChatPrivateService) {}
 
   @Post()
+  @ApiBody({type:CreateChatPrivadoDto})
   @ApiOperation({ summary: 'Crear chat privado' })
   async create(@Body() dto: CreateChatPrivadoDto) {
     const data = await this.chatPrivateService.create(dto);

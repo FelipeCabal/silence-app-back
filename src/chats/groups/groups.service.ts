@@ -21,15 +21,26 @@ export class GroupService {
   ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
-    const grupo = await this.gruposModel.create({
-      ...dto,
-      membersSummary: {
-        _id: new Types.ObjectId(creatorId),
-        UserSummary,
-      },
-    });
+    const user = await this.gruposModel.db
+    .collection('users')
+    .findOne({ _id: new Types.ObjectId(creatorId) });
 
-    return GrupoResponseDto.fromModel(grupo);
+  if (!user) throw new NotFoundException('Usuario no encontrado');
+
+  const userSummary = {
+    _id: user._id,
+    username: user.username,
+    nombre: user.nombre,
+    avatar: user.avatar ?? null,
+  };
+
+  const grupo = await this.gruposModel.create({
+    ...dto,
+    membersSummary: [userSummary], 
+    creatorId: new Types.ObjectId(creatorId),
+  });
+
+  return GrupoResponseDto.fromModel(grupo);
   }
 
   async invite(grupoId: string, userId: string) {

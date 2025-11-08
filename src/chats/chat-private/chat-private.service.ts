@@ -10,36 +10,58 @@ import { ChatPrivado } from '../schemas/chats.schema';
 import { ChatPrivadoResponseDto } from '../response/chat-private.response';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 import { FriendRequest } from 'src/users/entities/solicitud.model';
+import { Status } from 'src/config/enums/status.enum';
 
 @Injectable()
 export class ChatPrivateService {
   constructor(
     @InjectModel(ChatPrivado.name)
     private readonly chatPrivadoModel: Model<ChatPrivado>,
-    
+
     @InjectModel(FriendRequest.name)
     private readonly friendRequestModel: Model<FriendRequest>,
   ) {}
 
- 
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
     try {
-      const friendship = await this.friendRequestModel.findById(dto.amistad).lean();
-      console.log(friendship)
-      if (!friendship) {
-        throw new NotFoundException('La solicitud de amistad no existe.');
-      }
+      console.log(dto, 'e');
+      const friendship = await this.friendRequestModel
+        .findOne({
+          _id: dto.amistad,
+          status: Status.Aceptada,
+        })
+        .lean();
+      console.log(friendship, 'bro?');
 
-      const usuario1 = friendship.userEnvia;
-      const usuario2 = friendship.userRecibe;
+      if (!friendship) {
+        throw new NotFoundException(
+          'La solicitud de amistad no existe o no ha sido aceptada.',
+        );
+      }
+      const usuario1 = {
+        _id: friendship.userEnvia,
+        nombre: friendship.userEnvia.nombre,
+      };
+
+      const usuario2 = {
+        _id: friendship.userRecibe,
+        nombre: friendship.userRecibe.nombre,
+      };
+
+      console.log(usuario1, 'hola', usuario2);
 
       const exists = await this.chatPrivadoModel.findOne({
         $or: [
-          { 'usuario1._id': usuario1._id, 'usuario2._id': usuario2._id },
-          { 'usuario1._id': usuario2._id, 'usuario2._id': usuario1._id },
+          {
+            'amistadSummary.usuario1._id': usuario1._id,
+            'amistadSummary.usuario2._id': usuario2._id,
+          },
+          {
+            'amistadSummary.usuario1._id': usuario2._id,
+            'amistadSummary.usuario2._id': usuario1._id,
+          },
         ],
       });
-
       if (exists) {
         throw new ConflictException('El chat privado ya existe.');
       }
