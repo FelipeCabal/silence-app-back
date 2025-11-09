@@ -1,10 +1,12 @@
-import { Prop } from "@nestjs/mongoose";
+import { Prop } from '@nestjs/mongoose';
+
 
 export class Group{
-   @Prop()
- readonly _id: string;
+
   @Prop()
- readonly nombre: string;
+  readonly _id: string;
   @Prop()
- readonly imagen?: string;
+  readonly nombre: string;
+  @Prop()
+  readonly imagen?: string;
 }

@@ -2,10 +2,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RouterModule } from '@nestjs/core';
-import {
-  Comunidades,
-  ComunidadesSchema,
-} from './schemas/community.schema';
+import { Comunidades, ComunidadesSchema } from './schemas/community.schema';
 import { Grupos, GruposSchema } from './schemas/groups.schema';
 import {
   InvitacionesGrupos,
@@ -15,7 +12,10 @@ import { ChatPrivado, ChatPrivadoSchema } from './schemas/chats.schema';
 import { Mensajes, MensajesSchema } from './schemas/mensajes.schema';
 import { GroupService } from './groups/groups.service';
 import { CommunityService } from './comunity/community.service';
-import { MiembrosComunidades, MiembrosComunidadesSchema } from './schemas/miembros-community.schema';
+import {
+  MiembrosComunidades,
+  MiembrosComunidadesSchema,
+} from './schemas/miembros-community.schema';
 import { ChatPrivateController } from './chat-private/chat-private.controller';
 import { ComunidadesController } from './comunity/comunity.controller';
 import { GroupsController } from './groups/groups.controller';
@@ -25,10 +25,12 @@ import { FriendRequest } from 'src/users/entities/solicitud.schema';
 import { UsersModule } from 'src/users/users.module';
 import { MensajesController } from './messages/controllers/mensajes.controller';
 import { MessagesService } from './messages/services/mensajes.service';
+import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
+import { GroupInvitationsService } from './messages/services/group-invitations.service2';
 
 @Module({
   imports: [
-     forwardRef(() => UsersModule),
+    forwardRef(() => UsersModule),
     MongooseModule.forFeature([
       { name: Comunidades.name, schema: ComunidadesSchema },
       { name: Grupos.name, schema: GruposSchema },
@@ -37,7 +39,6 @@ import { MessagesService } from './messages/services/mensajes.service';
       { name: Mensajes.name, schema: MensajesSchema },
       { name: MiembrosComunidades.name, schema: MiembrosComunidadesSchema },
       { name: FriendRequest.name, schema: FriendRequestSchema },
-
     ]),
   ],
   controllers: [
@@ -45,13 +46,14 @@ import { MessagesService } from './messages/services/mensajes.service';
     ComunidadesController,
     GroupsController,
     MensajesController,
+    InvitationsGroupController,
   ],
   providers: [
     ChatPrivateService,
     GroupService,
     CommunityService,
-    MessagesService
-    ,
+    MessagesService,
+    GroupInvitationsService,
   ],
   exports: [
     ChatPrivateService,

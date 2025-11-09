@@ -11,6 +11,7 @@ import { Status } from 'src/config/enums/status.enum';
 import { CreateGrupoDto } from '../request/create-group.dto';
 import { GrupoResponseDto } from '../response/group.response';
 import { UserSummary } from 'src/users/entities/user.model';
+import { UsersService } from 'src/users/services/users.service';
 
 @Injectable()
 export class GroupService {
@@ -18,6 +19,7 @@ export class GroupService {
     @InjectModel(Grupos.name) private readonly gruposModel: Model<Grupos>,
     @InjectModel(InvitacionesGrupos.name)
     private readonly invitacionesModel: Model<InvitacionesGrupos>,
+    private readonly userService: UsersService,
   ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
@@ -87,5 +89,30 @@ export class GroupService {
     await this.invitacionesModel.deleteMany({ grupo: id });
 
     return { deleted: true };
+  }
+
+  async addUserToGroup(groupId: string, userId: any) {
+    const grupo = await this.gruposModel.findById(groupId);
+
+    if (!grupo) throw new NotFoundException('Grupo no encontrado.');
+
+    const alreadyMember = grupo.members?.some(
+      (member) => member._id.toString() === userId,
+    );
+
+    if (alreadyMember)
+      throw new ConflictException('El usuario ya pertenece al grupo.');
+
+    const user = await this.userService.findOneUser(userId);
+
+    grupo.members.push({
+      _id: new Types.ObjectId(user._id),
+      nombre: user.nombre,
+      avatar: user.imagen,
+    });
+
+    await grupo.save();
+
+    return GrupoResponseDto.fromModel(grupo);
   }
 }
