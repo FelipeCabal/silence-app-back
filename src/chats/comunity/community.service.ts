@@ -35,20 +35,21 @@ export class CommunityService {
 
     if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    const miembroSummary = {
+    const miembros = {
       _id: user._id,
       nombre: user.nombre,
       avatar: user.avatar ?? null,
+      rol: user.rol
     };
 
     const comunidad = await this.comunidadesModel.create({
       ...dto,
-      miembrosSummary: [miembroSummary],
+      miembros: [miembros],
     });
 
     await this.miembrosModel.create({
       comunidad: comunidad._id,
-      usuarioSummary: miembroSummary,
+      usuarioSummary: miembros,
       rol: Role.Admin,
     });
 
@@ -98,7 +99,7 @@ export class CommunityService {
 
     await this.comunidadesModel.updateOne(
       { _id: new Types.ObjectId(comunidadId) },
-      { $push: { miembrosSummary: userSummary } },
+      { $push: { miembros: userSummary } },
     );
 
     return { message: 'Miembro agregado exitosamente' };
@@ -120,7 +121,7 @@ export class CommunityService {
 
     await this.comunidadesModel.updateOne(
       { _id: new Types.ObjectId(comunidadId) },
-      { $pull: { miembrosSummary: { _id: new Types.ObjectId(userId) } } },
+      { $pull: { miembros: { _id: new Types.ObjectId(userId) } } },
     );
 
     return { removed: true };

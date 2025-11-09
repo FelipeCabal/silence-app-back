@@ -52,8 +52,8 @@ export class MessagesService {
       const chat = await this.privateChatsService.findById(chatId);
 
       const allowed =
-        chat.amistadSummary.usuario1._id.toString() === userId ||
-        chat.amistadSummary.usuario2._id.toString() === userId;
+        chat.amistad.usuario1._id.toString() === userId ||
+        chat.amistad.usuario2._id.toString() === userId;
 
       if (!allowed)
         throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
@@ -62,7 +62,7 @@ export class MessagesService {
     if (chatType === 'group') {
       const chat = await this.groupChatService.findById(chatId);
 
-      const isMember = chat.membersSummary.some(
+      const isMember = chat.members.some(
         (m) => m._id.toString() === userId,
       );
 
@@ -73,7 +73,7 @@ export class MessagesService {
     if (chatType === 'community') {
       const chat = await this.comunidadesService.findById(chatId);
 
-      const isAllowed = chat.miembrosSummary.some(
+      const isAllowed = chat.miembros.some(
         (m) =>
           m._id.toString() === userId && ['Admin', 'Owner'].includes(m.rol),
       );

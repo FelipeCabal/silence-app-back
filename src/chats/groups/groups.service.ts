@@ -36,7 +36,7 @@ export class GroupService {
 
   const grupo = await this.gruposModel.create({
     ...dto,
-    membersSummary: [userSummary], 
+    members: [userSummary], 
     creatorId: new Types.ObjectId(creatorId),
   });
 
@@ -59,7 +59,7 @@ export class GroupService {
       user: userId,
       grupo: grupoId,
       usuarioSummary: { _id: new Types.ObjectId(userId) },
-      groupSummary: { _id: new Types.ObjectId(grupoId) },
+      group: { _id: new Types.ObjectId(grupoId) },
       status: Status.Pendiente,
     });
 

@@ -1,12 +1,18 @@
 import { Comunidades } from "../schemas/community.schema";
-import { MembersSummary } from "../models/member.model";
+import { Members } from "../models/member.model";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class ComunidadResponseDto {
+    @ApiProperty()
   id: string;
+    @ApiProperty()
   nombre: string;
+    @ApiProperty()
   descripcion?: string;
+    @ApiProperty()
   imagen?: string;
-  miembrosSummary: MembersSummary[];
+    @ApiProperty()
+  miembros: Members[];
 
   static fromModel(model: Comunidades): ComunidadResponseDto {
     return {
@@ -14,7 +20,7 @@ export class ComunidadResponseDto {
       nombre: model.nombre,
       descripcion: model.descripcion,
       imagen: model.imagen,
-      miembrosSummary: model.miembrosSummary || [],
+      miembros: model.miembros || [],
     };
   }
 }

@@ -1,12 +1,18 @@
-import { Grupos } from "../schemas/groups.schema";
-import { MembersSummary } from "../models/member.model";
+import { Grupos } from '../schemas/groups.schema';
+import { Members } from '../models/member.model';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class GrupoResponseDto {
+  @ApiProperty()
   id: string;
+  @ApiProperty()
   nombre: string;
+  @ApiProperty()
   descripcion?: string;
+  @ApiProperty()
   imagen?: string;
-  membersSummary: MembersSummary[];
+  @ApiProperty()
+  members: Members[];
 
   static fromModel(model: Grupos): GrupoResponseDto {
     return {
@@ -14,7 +20,7 @@ export class GrupoResponseDto {
       nombre: model.nombre,
       descripcion: model.descripcion,
       imagen: model.imagen,
-      membersSummary: model.membersSummary,
+      members: model.members,
     };
   }
 }

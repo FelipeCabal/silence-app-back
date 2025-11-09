@@ -2,7 +2,7 @@ import { Prop } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { UserSummary } from 'src/users/entities/user.model';
 
-export class AmistadSummary {
+export class Amistad {
   @Prop({ type: Types.ObjectId })
   _id: Types.ObjectId;
  @Prop({ type: UserSummary })

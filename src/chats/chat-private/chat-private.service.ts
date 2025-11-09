@@ -53,12 +53,12 @@ export class ChatPrivateService {
       const exists = await this.chatPrivadoModel.findOne({
         $or: [
           {
-            'amistadSummary.usuario1._id': usuario1._id,
-            'amistadSummary.usuario2._id': usuario2._id,
+            'amistad.usuario1._id': usuario1._id,
+            'amistad.usuario2._id': usuario2._id,
           },
           {
-            'amistadSummary.usuario1._id': usuario2._id,
-            'amistadSummary.usuario2._id': usuario1._id,
+            'amistad.usuario1._id': usuario2._id,
+            'amistad.usuario2._id': usuario1._id,
           },
         ],
       });
@@ -67,7 +67,7 @@ export class ChatPrivateService {
       }
 
       const chat = await this.chatPrivadoModel.create({
-        amistadSummary: {
+        amistad: {
           _id: friendship._id,
           usuario1,
           usuario2,
@@ -93,8 +93,8 @@ export class ChatPrivateService {
     const chats = await this.chatPrivadoModel
       .find({
         $or: [
-          { 'amistadSummary.usuario1': new Types.ObjectId(userId) },
-          { 'amistadSummary.usuario2': new Types.ObjectId(userId) },
+          { 'amistad.usuario1': new Types.ObjectId(userId) },
+          { 'amistad.usuario2': new Types.ObjectId(userId) },
         ],
       })
       .sort({ updatedAt: -1 })
