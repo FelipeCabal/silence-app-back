@@ -27,7 +27,6 @@ import { RedisModule } from 'src/redis/redis.module';
   providers: [
     ComentariosService,
     PublicacionesService,
-    PublicacionesService,
     UsersService,
   ],
   exports: [
@@ -35,7 +34,6 @@ import { RedisModule } from 'src/redis/redis.module';
     MongooseModule,
     UsersModule,
     PublicacionesService,
-    PublicacionesService,
-  ],
+  ]
 })
 export class PublicacionesModule { }

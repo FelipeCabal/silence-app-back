@@ -45,7 +45,7 @@ export class AuthService {
         return this.login(login)
     }
 
-    async profile(id: number) {
+    async profile(id: string) {
         const cacheKey = `profile:${id}`;
         const TTL_SECONDS = 600;
 

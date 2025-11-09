@@ -13,7 +13,7 @@ export class InvitationsGroupController {
     @ApiOperation({ summary: 'Create a group invitation' })
     async createInvitation(
         @Param('groupId', ParseIntPipe) groupId: number,
-        @Param('receiverId', ParseIntPipe) receiverId: number,
+        @Param('receiverId', ParseIntPipe) receiverId: string,
         @Request() req: any
     ) {
         const senderId = req.user.id;
