@@ -38,28 +38,7 @@ export class GroupsController {
     };
   }
 
-  @Post(':id/invite')
-  @ApiOperation({ summary: 'Invitar usuario a grupo' })
-  @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { userId: { type: 'string' } },
-      required: ['userId'],
-    },
-  })
-  async invite(
-    @Param('id') grupoId: string,
-    @Body('userId') userId: string,
-  ) {
-    const data = await this.groupService.invite(grupoId, userId);
-    return {
-      err: false,
-      msg: 'Invitación enviada correctamente',
-      data,
-    };
-  }
-
+ 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los grupos' })
   async findAll() {

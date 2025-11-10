@@ -14,7 +14,7 @@ import { GroupInvitationsService } from '../services/group-invitations.service2'
 
 @Controller('group-invitations')
 @ApiTags('Group Invitations')
-//@UseGuards(AuthGuard)
+@UseGuards(AuthGuard)
 export class InvitationsGroupController {
   constructor(
     private readonly groupInvitationsService: GroupInvitationsService,
@@ -29,7 +29,7 @@ export class InvitationsGroupController {
     @Param('receiverId') receiverId: string,
     @Request() req: any,
   ): Promise<any> {
-    const senderId = req.user.id;
+    const senderId = req.user._id;
     return this.groupInvitationsService.create({
       senderId,
       receiverId,
@@ -41,7 +41,7 @@ export class InvitationsGroupController {
   @ApiOperation({ summary: 'Get all invitations for the authenticated user' })
   @ApiResponse({ status: 404, description: 'No invitations found.' })
   async getUserInvitations(@Request() req: any): Promise<any[]> {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const invitations = await this.groupInvitationsService.findByUser(userId);
 
     if (invitations.length === 0) {
@@ -65,7 +65,7 @@ export class InvitationsGroupController {
     @Param('invitationId') invitationId: string,
     @Request() req: any,
   ): Promise<any> {
-    const userId = req.user.id;
+    const userId = req.user._id;
     return this.groupInvitationsService.accept(invitationId, userId);
   }
 
@@ -83,7 +83,7 @@ export class InvitationsGroupController {
     @Param('invitationId') invitationId: string,
     @Request() req: any,
   ): Promise<void> {
-    const userId = req.user.id;
+    const userId = req.user._id;
     await this.groupInvitationsService.reject(invitationId, userId);
   }
 

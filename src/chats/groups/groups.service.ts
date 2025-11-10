@@ -49,51 +49,7 @@ export class GroupService {
   return GrupoResponseDto.fromModel(grupo);
   }
 
-async invite(grupoId: string, userId: string) {
-  const groupObjectId = new Types.ObjectId(grupoId);
-  const userObjectId = new Types.ObjectId(userId);
 
-  const exists = await this.invitacionesModel.findOne({
-    'group._id': groupObjectId,
-    'user._id': userObjectId,
-  });
-
-  if (exists) {
-    throw new ConflictException('Ya existe una invitación para este usuario.');
-  }
-
-  const user = await this.invitacionesModel.db
-    .collection('users')
-    .findOne({ _id: userObjectId });
-
-  if (!user) {
-    throw new NotFoundException('Usuario no encontrado.');
-  }
-
-  const group = await this.invitacionesModel.db
-    .collection('grupos')
-    .findOne({ _id: groupObjectId });
-
-  if (!group) {
-    throw new NotFoundException('Grupo no encontrado.');
-  }
-
-  const invitacion = await this.invitacionesModel.create({
-    user: {
-      _id: userObjectId,
-      nombre: user.nombre,
-      imagen: user.imagen ?? null,
-    },
-    group: {
-      _id: groupObjectId,
-      nombre: group.nombre,
-      imagen: group.imagen ?? null,
-    },
-    status: Status.Pendiente,
-  });
-
-  return invitacion;
-}
 
 
   async findAll() {
@@ -129,7 +85,7 @@ async invite(grupoId: string, userId: string) {
     }
 
     const alreadyMember = grupo.members?.some(
-      (member) => member._id.toString() === userObjectId.toString(),
+      (member) => member.user._id.toString() === userObjectId.toString(),
     );
 
     if (alreadyMember) {
@@ -142,7 +98,6 @@ async invite(grupoId: string, userId: string) {
     }
 
     const newMember = {
-      _id: userObjectId,
       user: {
         _id: userObjectId,
         nombre: user.nombre,

@@ -37,7 +37,7 @@ export class GroupInvitationsService {
     const receiver = await this.usersService.findOneUser(receiverId);
     const group = await this.groupService.findById(groupId);
 
-    if (group.members.some((m) => m._id.toString() === receiverId)) {
+    if (group.members.some((m) => m.user._id.toString() === receiverId)) {
       throw new HttpException(
         'El usuario ya está en el grupo',
         HttpStatus.BAD_REQUEST,
