@@ -10,8 +10,9 @@ import { InvitacionesGrupos } from '../schemas/invitations.schema';
 import { Status } from 'src/config/enums/status.enum';
 import { CreateGrupoDto } from '../request/create-group.dto';
 import { GrupoResponseDto } from '../response/group.response';
-import { UserSummary } from 'src/users/entities/user.model';
+import { User } from 'src/users/entities/user.model';
 import { UsersService } from 'src/users/services/users.service';
+import { Role } from 'src/config/enums/roles.enum';
 
 @Injectable()
 export class GroupService {
@@ -23,50 +24,77 @@ export class GroupService {
   ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
-    const user = await this.gruposModel.db
+    const users = await this.gruposModel.db
     .collection('users')
     .findOne({ _id: new Types.ObjectId(creatorId) });
 
-  if (!user) throw new NotFoundException('Usuario no encontrado');
+  if (!users) throw new NotFoundException('Usuario no encontrado');
 
-  const userSummary = {
-    _id: user._id,
-    username: user.username,
-    nombre: user.nombre,
-    avatar: user.avatar ?? null,
+ const miembro = {
+    user: {
+      _id: users._id,
+      username: users.username,
+      nombre: users.nombre,
+      avatar: users.avatar ?? null,
+    },
+    rol: Role.Admin, 
   };
 
   const grupo = await this.gruposModel.create({
     ...dto,
-    members: [userSummary], 
+    members: [miembro], 
     creatorId: new Types.ObjectId(creatorId),
   });
 
   return GrupoResponseDto.fromModel(grupo);
   }
 
-  async invite(grupoId: string, userId: string) {
-    const exists = await this.invitacionesModel.findOne({
-      grupo: grupoId,
-      user: userId,
-    });
+async invite(grupoId: string, userId: string) {
+  const groupObjectId = new Types.ObjectId(grupoId);
+  const userObjectId = new Types.ObjectId(userId);
 
-    if (exists) {
-      throw new ConflictException(
-        'Ya existe una invitación para este usuario.',
-      );
-    }
+  const exists = await this.invitacionesModel.findOne({
+    'group._id': groupObjectId,
+    'user._id': userObjectId,
+  });
 
-    const invitacion = await this.invitacionesModel.create({
-      user: userId,
-      grupo: grupoId,
-      usuarioSummary: { _id: new Types.ObjectId(userId) },
-      group: { _id: new Types.ObjectId(grupoId) },
-      status: Status.Pendiente,
-    });
-
-    return invitacion;
+  if (exists) {
+    throw new ConflictException('Ya existe una invitación para este usuario.');
   }
+
+  const user = await this.invitacionesModel.db
+    .collection('users')
+    .findOne({ _id: userObjectId });
+
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado.');
+  }
+
+  const group = await this.invitacionesModel.db
+    .collection('grupos')
+    .findOne({ _id: groupObjectId });
+
+  if (!group) {
+    throw new NotFoundException('Grupo no encontrado.');
+  }
+
+  const invitacion = await this.invitacionesModel.create({
+    user: {
+      _id: userObjectId,
+      nombre: user.nombre,
+      imagen: user.imagen ?? null,
+    },
+    group: {
+      _id: groupObjectId,
+      nombre: group.nombre,
+      imagen: group.imagen ?? null,
+    },
+    status: Status.Pendiente,
+  });
+
+  return invitacion;
+}
+
 
   async findAll() {
     const grupos = await this.gruposModel.find().lean();
@@ -91,26 +119,39 @@ export class GroupService {
     return { deleted: true };
   }
 
-  async addUserToGroup(groupId: string, userId: any) {
-    const grupo = await this.gruposModel.findById(groupId);
+   async addUserToGroup(groupId: string, userId: string) {
+    const grupoObjectId = new Types.ObjectId(groupId);
+    const userObjectId = new Types.ObjectId(userId);
 
-    if (!grupo) throw new NotFoundException('Grupo no encontrado.');
+    const grupo = await this.gruposModel.findById(grupoObjectId);
+    if (!grupo) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
 
     const alreadyMember = grupo.members?.some(
-      (member) => member._id.toString() === userId,
+      (member) => member._id.toString() === userObjectId.toString(),
     );
 
-    if (alreadyMember)
+    if (alreadyMember) {
       throw new ConflictException('El usuario ya pertenece al grupo.');
+    }
 
     const user = await this.userService.findOneUser(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
 
-    grupo.members.push({
-      _id: new Types.ObjectId(user._id),
-      nombre: user.nombre,
-      avatar: user.imagen,
-    });
+    const newMember = {
+      _id: userObjectId,
+      user: {
+        _id: userObjectId,
+        nombre: user.nombre,
+        avatar: user.imagen ?? null,
+      },
+      rol: Role.Member, 
+    };
 
+    grupo.members.push(newMember);
     await grupo.save();
 
     return GrupoResponseDto.fromModel(grupo);

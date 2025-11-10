@@ -20,7 +20,7 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 
 @Controller('groups')
 @ApiTags('groups')
-/* @UseGuards(AuthGuard) */
+ @UseGuards(AuthGuard) 
 export class GroupsController {
   constructor(private readonly groupService: GroupService) {}
 

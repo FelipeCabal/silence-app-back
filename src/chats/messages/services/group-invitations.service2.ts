@@ -3,6 +3,7 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -44,7 +45,7 @@ export class GroupInvitationsService {
     }
 
     const existing = await this.groupInvitationModel.findOne({
-      'usuarioSummary._id': receiver._id,
+      'user._id': receiver._id,
       'group._id': group.id,
       status: Status.Pendiente,
     });
@@ -57,7 +58,7 @@ export class GroupInvitationsService {
     }
 
     const newInvitation = await this.groupInvitationModel.create({
-      usuarioSummary: {
+      user: {
         _id: receiver._id,
         nombre: receiver.nombre,
         imagen: receiver.imagen,
@@ -73,10 +74,7 @@ export class GroupInvitationsService {
     return InvitacionSimpleModel.fromEntity(newInvitation);
   }
 
-  async accept(
-    invitationId: string,
-    userId: string,
-  ): Promise<InvitacionSimpleModel> {
+async accept(invitationId: string, userId: string): Promise<InvitacionSimpleModel> {
     const invitation = await this.groupInvitationModel.findById(invitationId);
 
     if (!invitation) {
@@ -90,11 +88,8 @@ export class GroupInvitationsService {
       );
     }
 
-    if (invitation.usuarioSummary._id.toString() !== userId) {
-      throw new HttpException(
-        'No estás autorizado para aceptar esta invitación',
-        HttpStatus.UNAUTHORIZED,
-      );
+    if (invitation.user._id.toString() !== userId.toString()) {
+      throw new UnauthorizedException('No estás autorizado para aceptar esta invitación');
     }
 
     invitation.status = Status.Aceptada;
@@ -102,7 +97,7 @@ export class GroupInvitationsService {
 
     await this.groupService.addUserToGroup(
       invitation.group._id.toString(),
-      invitation.usuarioSummary._id,
+      invitation.user._id.toString(),
     );
 
     return InvitacionSimpleModel.fromEntity(invitation);
@@ -115,7 +110,7 @@ export class GroupInvitationsService {
       throw new NotFoundException('Invitación no encontrada');
     }
 
-    if (invitation.usuarioSummary._id.toString() !== userId) {
+    if (invitation.user._id.toString() !== userId) {
       throw new HttpException(
         'No estás autorizado para rechazar esta invitación',
         HttpStatus.UNAUTHORIZED,
@@ -127,7 +122,7 @@ export class GroupInvitationsService {
 
   async findByUser(userId: string): Promise<InvitacionSimpleModel[]> {
     const invitations = await this.groupInvitationModel.find({
-      'usuarioSummary._id': userId,
+      'user._id': userId,
     });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
@@ -139,7 +134,7 @@ export class GroupInvitationsService {
 
   async findSimpleByUser(userId: string): Promise<InvitacionSimpleModel[]> {
     const invitations = await this.groupInvitationModel.find({
-      'usuarioSummary._id': userId,
+      'user._id': userId,
     });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
