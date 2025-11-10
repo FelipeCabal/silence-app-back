@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Param, Post, Request, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { LikesService } from "./likes.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { get, request } from "http";
+import { PublicacionResponseDto } from "src/publicaciones/dto/responses/publicacion-response.dto";
 
 
 @Controller("likes")
@@ -13,6 +14,8 @@ export class LikesController {
     @UseGuards(AuthGuard)
     @Get()
     @ApiOperation({ summary: 'obtener todos mis likes' })
+    @ApiResponse({ status: 200, type: [PublicacionResponseDto] })
+    @ApiResponse({ status: 404, description: 'No se encontraron likes' })
     async getUserLikes(
         @Request() req: any
     ) {
@@ -23,6 +26,8 @@ export class LikesController {
     @Post('like/:postId')
     @ApiParam({ name: 'postId', description: 'ID of the post to like' })
     @ApiOperation({ summary: 'Like a post' })
+    @ApiResponse({ status: 200, description: 'Post liked successfully' })
+    @ApiResponse({ status: 404, description: 'Post not found' })
     async likePost(
         @Param('postId') postId: string,
         @Request() req: any
@@ -34,6 +39,8 @@ export class LikesController {
     @Post('unlike/:postId')
     @ApiParam({ name: 'postId', description: 'ID of the post to unlike' })
     @ApiOperation({ summary: 'Unlike a post' })
+    @ApiResponse({ status: 200, description: 'Post unliked successfully' })
+    @ApiResponse({ status: 404, description: 'Post not found' })
     async unlikePost(
         @Param('postId') postId: string,
         @Request() req: any

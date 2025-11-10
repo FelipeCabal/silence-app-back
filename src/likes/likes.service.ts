@@ -54,7 +54,7 @@ export class LikesService {
         user.likes.push(publicacionSummary as any);
         await user.save();
 
-
+        return { message: 'Post liked successfully' };
     }
 
     async unlikePost(postId: string, userId: string) {
@@ -76,6 +76,6 @@ export class LikesService {
         user.likes = user.likes.filter(publicacion => publicacion._id.toString() !== postId);
         await user.save();
 
-        return { message: `Publicación con id ${postId} deslikeada por el usuario con id ${userId}` };
+        return { message: 'Post unliked successfully' };
     }
 }
