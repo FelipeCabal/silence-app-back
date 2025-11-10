@@ -1,12 +1,14 @@
 import { UsersService } from "./users.service";
-import { forwardRef, HttpException, HttpStatus, Inject } from "@nestjs/common";
+import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Status } from "src/config/enums/status.enum";
 import { PrivateChatsService } from "src/chats/services/private-chats.service";
 import { InjectModel } from "@nestjs/mongoose";
 import { FriendRequest } from "../entities/solicitud.schema";
 import { Model } from "mongoose";
 import { UserSchema } from "../entities/users.schema";
+import { RedisService } from "../../redis/redis.service";
 
+@Injectable()
 export class SolicitudesAmistadService {
     constructor(
         @Inject(forwardRef(() => UsersService))
@@ -18,8 +20,36 @@ export class SolicitudesAmistadService {
         private readonly privateChatsService: PrivateChatsService,
 
         @InjectModel(FriendRequest.name)
-        private readonly requestModel: Model<FriendRequest>
+        private readonly requestModel: Model<FriendRequest>,
+
+        private readonly redisService: RedisService,
     ) { }
+
+    private readonly TTL_REQUEST_SECONDS = 600;
+
+    private buildPairKey(user1Id: string, user2Id: string) {
+        const [a, b] = [user1Id, user2Id].sort();
+        return `friendreq:pair:${a}:${b}`;
+    }
+
+    private async cacheSet(key: string, value: any, ttl: number) {
+        try {
+            await this.redisService.client.set(key, JSON.stringify(value), 'EX', ttl);
+        } catch { }
+    }
+
+    private async cacheGet<T = any>(key: string): Promise<T | null> {
+        try {
+            const raw = await this.redisService.client.get(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+    }
+
+    private async invalidate(keys: string[]) {
+        try {
+            if (keys.length) await this.redisService.client.del(...keys);
+        } catch { }
+    }
 
     async sendFriendRequest(userSendId: string, userReceiveId: string) {
         const userSend = await this.usersService.findOneUser(userSendId);
@@ -79,6 +109,15 @@ export class SolicitudesAmistadService {
         )
 
         const savedRequest = await friendRequest.save()
+
+        await this.invalidate([
+            `friendreq:received:${userReceiveId}`,
+            `friendreq:user:${userSendId}`,
+            `friendreq:user:${userReceiveId}`,
+            this.buildPairKey(userSendId, userReceiveId),
+        ]);
+
+        await this.invalidate([`friendreq:req:${savedRequest._id.toString()}`]);
         return {
             ...savedRequest.toObject(),
             _id: savedRequest._id.toString()
@@ -90,6 +129,10 @@ export class SolicitudesAmistadService {
         if (!exists) {
             throw new HttpException("User not found", HttpStatus.NOT_FOUND);
         }
+
+        const cacheKey = `friendreq:received:${userId}`;
+        const cached = await this.cacheGet<any[]>(cacheKey);
+        if (cached) return cached;
 
         const requests = await this.requestModel
             .find({
@@ -104,7 +147,7 @@ export class SolicitudesAmistadService {
             .lean()
             .exec();
 
-        return requests.map(req => {
+        const result = requests.map(req => {
             const sender = req.userEnvia as any;
 
             return {
@@ -119,13 +162,26 @@ export class SolicitudesAmistadService {
                 }
             };
         });
+        this.cacheSet(cacheKey, result, this.TTL_REQUEST_SECONDS);
+        return result;
     }
 
     async findOneReq(requestId: string) {
-        return this.requestModel
+        const cacheKey = `friendreq:req:${requestId}`;
+        const cached = await this.cacheGet<any>(cacheKey);
+        if (cached) return cached;
+
+        const req = await this.requestModel
             .findById(requestId)
-            .populate('userEnvia', 'nombre imagen')
-            .populate('userRecibe', 'nombre imagen')
+            .populate('userEnvia', 'nombre imagen email descripcion')
+            .populate('userRecibe', 'nombre imagen email descripcion')
+            .lean()
+            .exec();
+
+        if (req) {
+            this.cacheSet(cacheKey, req, this.TTL_REQUEST_SECONDS);
+        }
+        return req as any;
     }
 
     async updateRequest(requestId: string, userId: string, newStatus: Status) {
@@ -203,6 +259,23 @@ export class SolicitudesAmistadService {
             //    }
             //}
 
+            await this.invalidate([
+                `friendreq:req:${requestId}`,
+                `friendreq:received:${receiverId}`,
+                `friendreq:user:${senderId}`,
+                `friendreq:user:${receiverId}`,
+                this.buildPairKey(senderId, receiverId),
+            ]);
+
+            if (newStatus === Status.Aceptada) {
+                await this.invalidate([
+                    `friendreq:accepted:${senderId}`,
+                    `friendreq:accepted:${receiverId}`,
+                    `users:friends:${senderId}`,
+                    `users:friends:${receiverId}`,
+                ]);
+            }
+
             return updatedRequest;
         } catch (error) {
             throw new HttpException(
@@ -232,35 +305,65 @@ export class SolicitudesAmistadService {
         if (!deleteRequest) {
             throw new HttpException("The request wasn't deleted", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+        const senderId = (friendRequest.userEnvia as any)._id.toString();
+        const receiverId = (friendRequest.userRecibe as any)._id.toString();
+        await this.invalidate([
+            `friendreq:req:${requestId}`,
+            `friendreq:received:${receiverId}`,
+            `friendreq:user:${senderId}`,
+            `friendreq:user:${receiverId}`,
+            this.buildPairKey(senderId, receiverId),
+        ]);
         return deleteRequest;
     }
 
     async findOneRequestByIds(user1Id: string, user2Id: string) {
-        return this.requestModel.findOne({
+        const cacheKey = this.buildPairKey(user1Id, user2Id);
+        const cached = await this.cacheGet<any>(cacheKey);
+        if (cached) return cached;
+
+        const req = await this.requestModel.findOne({
             $or: [
                 { userEnvia: user1Id, userRecibe: user2Id },
                 { userEnvia: user2Id, userRecibe: user1Id },
             ],
-        });
+        }).lean().exec();
+        if (req) this.cacheSet(cacheKey, req, this.TTL_REQUEST_SECONDS);
+        return req as any;
     }
 
 
     async findUserRequests(userId: string) {
-        return this.requestModel
+        const cacheKey = `friendreq:user:${userId}`;
+        const cached = await this.cacheGet<any[]>(cacheKey);
+        if (cached) return cached;
+
+        const list = await this.requestModel
             .find({ $or: [{ userEnvia: userId }, { userRecibe: userId }] })
             .populate('userEnvia', 'nombre imagen')
-            .populate('userRecibe', 'nombre imagen');
+            .populate('userRecibe', 'nombre imagen')
+            .lean()
+            .exec();
+        this.cacheSet(cacheKey, list, this.TTL_REQUEST_SECONDS);
+        return list as any;
     }
 
     async findAcceptedFriendships(userId: string) {
-        return this.requestModel
+        const cacheKey = `friendreq:accepted:${userId}`;
+        const cached = await this.cacheGet<any[]>(cacheKey);
+        if (cached) return cached as any;
+
+        const list = await this.requestModel
             .find({
                 status: Status.Aceptada,
                 $or: [{ userEnvia: userId }, { userRecibe: userId }],
             })
             .populate('userEnvia', 'nombre imagen descripcion')
             .populate('userRecibe', 'nombre imagen descripcion')
+            .lean()
             .exec();
+        this.cacheSet(cacheKey, list, this.TTL_REQUEST_SECONDS);
+        return list as any;
     }
 
 

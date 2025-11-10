@@ -16,7 +16,7 @@ export class InvitationsGroupController {
         @Param('receiverId', ParseIntPipe) receiverId: string,
         @Request() req: any
     ) {
-        const senderId = req.user.id;
+        const senderId = req.user._id;
         return await this.groupInvitationsService.createInvitation(
             senderId,
             receiverId,
@@ -27,7 +27,7 @@ export class InvitationsGroupController {
     @Get()
     @ApiOperation({ summary: 'Get all invitations for the authenticated user' })
     async getUserInvitations(@Request() req: any) {
-        const userId = req.user.id
+        const userId = req.user._id
         return await this.groupInvitationsService.findUserInvitations(userId)
     }
 
@@ -37,7 +37,7 @@ export class InvitationsGroupController {
         @Param('invitationId', ParseIntPipe) invitationId: number,
         @Request() req: any
     ): Promise<void> {
-        const userId = req.user.id
+        const userId = req.user._id
         await this.groupInvitationsService.acceptInvitation(invitationId, userId);
     }
 
@@ -47,7 +47,7 @@ export class InvitationsGroupController {
         @Param('invitationId', ParseIntPipe) invitationId: number,
         @Request() req: any
     ): Promise<void> {
-        const userId = req.user.id
+        const userId = req.user._id
         await this.groupInvitationsService.rejectInvitation(invitationId, userId);
     }
 

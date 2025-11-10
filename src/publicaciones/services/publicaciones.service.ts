@@ -6,7 +6,7 @@ import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
 import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
-import { RedisService } from 'src/redis/redis.service';
+import { RedisService } from '../../redis/redis.service';
 
 @Injectable()
 export class PublicacionesService {

@@ -16,7 +16,7 @@ export class PrivateChatsController {
         @Request() req: any,
         @Query() chatQueries: ComunityAndGroupQueries,
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.privateChatsService.findAllUserChats(userId, chatQueries);
     }
 

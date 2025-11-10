@@ -19,7 +19,7 @@ export class GroupChatsController {
         @Body() createChatDto: createGrupoDto,
         @Request() req: any
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.groupChatsService.create(createChatDto, userId)
     }
 
@@ -29,7 +29,7 @@ export class GroupChatsController {
         @Request() req: any,
         @Query() queries: ComunityAndGroupQueries
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.groupChatsService.findAllGroups(userId, queries);
     }
 

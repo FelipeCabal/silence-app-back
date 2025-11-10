@@ -41,7 +41,7 @@ export class ComunidadesController {
         @Body() createCommunityDto: any,
         @Request() req: any
     ) {
-        const ownerId = req.user.id;
+        const ownerId = req.user._id;
         return this.comunidadesService.create(createCommunityDto, ownerId);
     }
 
@@ -51,7 +51,7 @@ export class ComunidadesController {
         @Param('id', ParseIntPipe) communityId: number,
         @Request() req: any
     ) {
-        const userId = req.user.id;
+        const userId = req.user._id;
         return this.comunidadesService.addMember(communityId, userId);
     }
 
@@ -62,7 +62,7 @@ export class ComunidadesController {
         @Param('userId', ParseIntPipe) userId: number,
         @Request() req: any
     ) {
-        const executorId = req.user.id;
+        const executorId = req.user._id;
         return this.comunidadesService.removeMember(communityId, userId, executorId);
     }
 
@@ -74,7 +74,7 @@ export class ComunidadesController {
         @Body('rol') role: Role,
         @Request() req: any
     ) {
-        const executorId = req.user.id;
+        const executorId = req.user._id;
         return this.comunidadesService.toggleAdminRole(communityId, userId, role, executorId);
     }
 }

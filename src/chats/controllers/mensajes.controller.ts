@@ -33,7 +33,7 @@ export class MensajesController {
         @Param('chatType') chatType: string,
         @Request() req: any
     ) {
-        const userId = req.user.id;
+        const userId = req.user._id;
         return await this.mensajesService.ClearChat(chatId, userId, chatType);
     }
 }

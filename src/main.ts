@@ -32,6 +32,7 @@ async function bootstrap() {
     .setTitle('Silence App API')
     .setDescription('The Silence App API description')
     .setVersion('1.0')
+    .addBearerAuth()
     .addTag('Silence App API')
     .build();
   const document = SwaggerModule.createDocument(app, config);

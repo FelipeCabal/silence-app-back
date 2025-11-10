@@ -2,39 +2,33 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Request, UseGuards, 
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { UserQueries } from '../dto/querie.dto';
 
 @Controller('users')
 @ApiTags('users')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  @Get()
+  @Get('/others')
   async findAllUsers(
     @Request() req: any,
     @Query() userQueries: UserQueries,
   ) {
-    const userId = req.user.id;
+    const userId = req.user._id;
     return this.usersService.findAllUsers(userId, userQueries);
   }
 
-  //@Post()
-  //@ApiOperation({ summary: 'Create a new User' })
-  ////@ApiResponse({ status: 200, description: '' })
-  //async create(@Body() createUser: CreateUserDto) {
-  //  return this.usersService.createUser(createUser);
-  //}
-
-  @Get(':id/friends')
+  @Get('/friends')
   @ApiOperation({ summary: "Get all friends from an user" })
   findAll(
     @Request() req: any
   ) {
     const userId = req.user
-    return this.usersService.findAllFriends(userId.id);
+    return this.usersService.findAllFriends(userId._id);
   }
 
 
