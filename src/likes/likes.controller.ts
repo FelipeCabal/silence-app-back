@@ -13,9 +13,9 @@ export class LikesController {
 
     @UseGuards(AuthGuard)
     @Get()
-    @ApiOperation({ summary: 'obtener todos mis likes' })
+    @ApiOperation({ summary: 'Get all my likes' })
     @ApiResponse({ status: 200, type: [PublicacionResponseDto] })
-    @ApiResponse({ status: 404, description: 'No se encontraron likes' })
+    @ApiResponse({ status: 404, description: 'No likes found' })
     async getUserLikes(
         @Request() req: any
     ) {
