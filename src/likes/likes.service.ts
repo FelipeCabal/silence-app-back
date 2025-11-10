@@ -1,68 +1,81 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
-import { User } from 'src/users/entities/user.entity';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
+import { ConflictException } from "@nestjs/common";
+import { Publicacion } from "src/publicaciones/entities/publicacion.schema";
+import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
+import { UserSchema } from "src/users/entities/users.schema";
 
-@Injectable()
 export class LikesService {
+    constructor(
+        @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
+        @InjectModel(Publicacion.name) private readonly publicacionModel: Model<Publicacion>,
+    ) { }
 
-	constructor(
-		@InjectModel(Publicaciones.name)
-		private readonly publicacionesModel: Model<Publicaciones>,
-		@InjectModel(User.name)
-		private readonly userModel: Model<User>
-	) { }
+    async getUserLikes(userId: string) {
+        const user = await this.userModel.findById(userId).populate('likes');
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
+        }
+        return user.likes;
+    }
 
-	async likePost(postId: string, userId: string) {
-		const post = await this.publicacionesModel.findById(postId);
-		const user = await this.userModel.findById(userId);
+    async likePost(postId: string, userId: string) {
+        const user = await this.userModel.findById(userId);
+        const publicacion = await this.publicacionModel.findById(postId);
+        const publicacionSummary = PublicacionModel.fromModel(publicacion);
 
-		if (!post) {
-			throw new HttpException('post not found', HttpStatus.NOT_FOUND);
-		}
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
+        }
 
-		if (!user) {
-			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
-		}
+        if (!publicacion) {
+            throw new Error(`Publicación con id ${postId} no encontrada`);
+        }
 
-		user.likes.push({ postId } as any);
-		await user.save();
+        const userObjectId = new Types.ObjectId(userId);
 
-		return post;
-	}
+        const alreadyLikedPost = publicacion.likes?.some((id: any) => {
+            return id?.toString?.() === userId;
+        });
 
-	async unlikePost(postId: string, userId: number) {
-		const post = await this.publicacionesModel.findById(postId);
-		const user = await this.userModel.findById(userId);
+        const alreadyLikedInUser = user.likes?.some((post: any) => {
+            return post._id?.toString?.() === postId;
+        });
 
-		if (!post) {
-			throw new HttpException('post not found', HttpStatus.NOT_FOUND);
-		}
 
-		if (!user) {
-			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
-		}
+        if (alreadyLikedPost || alreadyLikedInUser) {
+            throw new ConflictException('El usuario ya dio like a esta publicación');
+        }
 
-		user.likes = user.likes.filter((like: any) => like.postId !== postId);
-		await user.save();
+        publicacion.likes.push(userObjectId);
+        publicacion.cantLikes = publicacion.likes.length;
+        await publicacion.save();
 
-		return post;
-	}
+        user.likes.push(publicacionSummary as any);
+        await user.save();
 
-	async findLikesByUser(userId: string) {
-		const user = await this.userModel
-			.findOne({ _id: userId })
-			.populate('likes.postId');
 
-		if (!user) {
-			throw new HttpException('user not found', HttpStatus.NOT_FOUND);
-		}
+    }
 
-		if (!user.likes || user.likes.length === 0) {
-			throw new HttpException('este usuario no tiene interacciones', HttpStatus.NOT_FOUND);
-		}
+    async unlikePost(postId: string, userId: string) {
+        const user = await this.userModel.findById(userId);
+        const publicacion = await this.publicacionModel.findById(postId);
 
-	 	return user.likes;
-	}
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
+        }
+
+        if (!publicacion) {
+            throw new Error(`Publicación con id ${postId} no encontrada`);
+        }
+
+        publicacion.likes = publicacion.likes.filter(user => user.toString() !== userId);
+        publicacion.cantLikes = publicacion.likes.length;
+        await publicacion.save();
+
+        user.likes = user.likes.filter(publicacion => publicacion._id.toString() !== postId);
+        await user.save();
+
+        return { message: `Publicación con id ${postId} deslikeada por el usuario con id ${userId}` };
+    }
 }
