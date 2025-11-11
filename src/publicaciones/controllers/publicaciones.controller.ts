@@ -15,7 +15,7 @@ import { PublicacionesService } from '../services/publicaciones.service';
 import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
 import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { AuthGuard } from '../../auth/guards/auth.guard';
 
 @Controller('posts')
 @ApiTags('Posts')
@@ -74,7 +74,7 @@ export class PublicacionesController {
   @ApiResponse({ status: 404, description: 'No posts found for the user.' })
   async findByUser(@Request() req: any) {
     const usuario = req.user;
-    const posts = await this.publicacionesService.findByUser(usuario.id);
+    const posts = await this.publicacionesService.findByUser(usuario._id);
 
     if (posts.length === 0)
       throw new NotFoundException(

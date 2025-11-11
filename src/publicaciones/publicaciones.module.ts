@@ -9,6 +9,7 @@ import { Publicacion, PublicacionSchema } from './entities/publicacion.schema';
 import { PublicacionesService } from './services/publicaciones.service';
 import { ComentariosController } from './controllers/comentarios.controller';
 import { ComentariosService } from './services/comentarios.service';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -20,11 +21,11 @@ import { ComentariosService } from './services/comentarios.service';
       },
     ]),
     UsersModule,
+    RedisModule
   ],
   controllers: [ComentariosController, PublicacionesController],
   providers: [
     ComentariosService,
-    PublicacionesService,
     PublicacionesService,
     UsersService,
   ],
@@ -33,7 +34,6 @@ import { ComentariosService } from './services/comentarios.service';
     MongooseModule,
     UsersModule,
     PublicacionesService,
-    PublicacionesService,
-  ],
+  ]
 })
-export class PublicacionesModule {}
+export class PublicacionesModule { }

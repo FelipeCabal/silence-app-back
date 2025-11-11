@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger'
 import { ComentariosService } from '../services/comentarios.service';
 import { CreateComentarioDto } from '../dto/requests/comentarios/create-comentario.dto';
 import { UpdateComentarioDto } from '../dto/requests/comentarios/update-comentario.dto';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { AuthGuard } from '../../auth/guards/auth.guard';
 
 @Controller('posts/comments')
 @ApiTags('Comentarios')

@@ -11,6 +11,7 @@ import { Role } from 'src/config/enums/roles.enum';
 import { CreateComunidadDto } from '../request/community.dto';
 import { ComunidadResponseDto } from '../response/community.response';
 import { MiembrosComunidades } from '../schemas/miembros-community.schema';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class CommunityService {
@@ -19,7 +20,8 @@ export class CommunityService {
     private readonly comunidadesModel: Model<Comunidades>,
     @InjectModel(MiembrosComunidades.name)
     private readonly miembrosModel: Model<MiembrosComunidades>,
-  ) {}
+    private readonly redisService: RedisService,
+  ) { }
 
   async create(dto: CreateComunidadDto, userId: string) {
     const exists = await this.comunidadesModel.findOne({
@@ -103,39 +105,42 @@ export class CommunityService {
       throw new NotFoundException('Comunidad no encontrada.');
     }
 
+    await this.redisService.client.del(`community:${comunidadId}:members`);
+
     return { message: 'Miembro agregado exitosamente.' };
   }
 
-async remove(comunidadId: string, userId: string) {
-  const comunidadObjectId = new Types.ObjectId(comunidadId);
-  const userObjectId = new Types.ObjectId(userId);
+  async remove(comunidadId: string, userId: string) {
+    const comunidadObjectId = new Types.ObjectId(comunidadId);
+    const userObjectId = new Types.ObjectId(userId);
 
-  const comunidad = await this.comunidadesModel.findById(comunidadObjectId);
+    const comunidad = await this.comunidadesModel.findById(comunidadObjectId);
 
-  if (!comunidad) {
-    throw new NotFoundException('Comunidad no encontrada');
+    if (!comunidad) {
+      throw new NotFoundException('Comunidad no encontrada');
+    }
+
+    const esMiembro = comunidad.miembros.some(
+      (m) => m.user._id.toString() === userObjectId.toString(),
+    );
+
+    if (!esMiembro) {
+      throw new NotFoundException('El usuario no es miembro de esta comunidad');
+    }
+
+    const result = await this.comunidadesModel.updateOne(
+      { _id: comunidadObjectId },
+      { $pull: { miembros: { 'user._id': { $eq: userObjectId } } } }
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new BadRequestException('No se eliminó el miembro (no coincidió en la base de datos)');
+    }
+
+    await this.redisService.client.del(`community:${comunidadId}:members`);
+
+    return { removed: true, message: 'Miembro eliminado exitosamente' };
   }
-
-  const esMiembro = comunidad.miembros.some(
-    (m) => m.user._id.toString() === userObjectId.toString(),
-  );
-
-  if (!esMiembro) {
-    throw new NotFoundException('El usuario no es miembro de esta comunidad');
-  }
-
-  const result = await this.comunidadesModel.updateOne(
-    { _id: comunidadObjectId },
-    { $pull: { miembros: { 'user._id': { $eq: userObjectId } } } }
-  );
-
-  if (result.modifiedCount === 0) {
-    throw new BadRequestException('No se eliminó el miembro (no coincidió en la base de datos)');
-  }
-
-  return { removed: true, message: 'Miembro eliminado exitosamente' };
-}
-
 
   async removeCommunity(comunidadId: string) {
     const comunidadObjectId = new Types.ObjectId(comunidadId);

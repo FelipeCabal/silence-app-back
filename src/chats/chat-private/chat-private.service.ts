@@ -11,6 +11,7 @@ import { ChatPrivadoResponseDto } from '../response/chat-private.response';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 import { FriendRequest } from 'src/users/entities/solicitud.model';
 import { Status } from 'src/config/enums/status.enum';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class ChatPrivateService {
@@ -20,18 +21,18 @@ export class ChatPrivateService {
 
     @InjectModel(FriendRequest.name)
     private readonly friendRequestModel: Model<FriendRequest>,
-  ) {}
+
+    private readonly redisService: RedisService,
+  ) { }
 
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
     try {
-      console.log(dto, 'e');
       const friendship = await this.friendRequestModel
         .findOne({
           _id: dto.amistad,
           status: Status.Aceptada,
         })
         .lean();
-      console.log(friendship, 'bro?');
 
       if (!friendship) {
         throw new NotFoundException(
@@ -47,8 +48,6 @@ export class ChatPrivateService {
         _id: friendship.userRecibe,
         nombre: friendship.userRecibe.nombre,
       };
-
-      console.log(usuario1, 'hola', usuario2);
 
       const exists = await this.chatPrivadoModel.findOne({
         $or: [
@@ -75,6 +74,9 @@ export class ChatPrivateService {
         lastMessage: dto.lastMessage ?? null,
       });
 
+      await this.redisService.client.del(`private-chats:${usuario1._id}`);
+      await this.redisService.client.del(`private-chats:${usuario2._id}`);
+
       return ChatPrivadoResponseDto.fromModel(chat.toObject());
     } catch (err) {
       console.error(err);
@@ -90,6 +92,13 @@ export class ChatPrivateService {
   }
 
   async findAllByUser(userId: string): Promise<ChatPrivadoResponseDto[]> {
+    const cacheKey = `private-chats:${userId}`;
+    const cachedChats = await this.redisService.client.get(cacheKey);
+
+    if (cachedChats) {
+      return JSON.parse(cachedChats);
+    }
+
     const chats = await this.chatPrivadoModel
       .find({
         $or: [
@@ -100,7 +109,16 @@ export class ChatPrivateService {
       .sort({ updatedAt: -1 })
       .lean();
 
-    return chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
+    const chatDtos = chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
+
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(chatDtos),
+      'EX',
+      3600,
+    );
+
+    return chatDtos;
   }
 
   async updateLastMessage(id: string, message: string) {

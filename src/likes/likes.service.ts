@@ -4,15 +4,22 @@ import { ConflictException } from "@nestjs/common";
 import { Publicacion } from "src/publicaciones/entities/publicacion.schema";
 import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
 import { UserSchema } from "src/users/entities/users.schema";
+import { RedisService } from "src/redis/redis.service";
 
 export class LikesService {
     constructor(
         @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
         @InjectModel(Publicacion.name) private readonly publicacionModel: Model<Publicacion>,
+        private readonly redisService: RedisService,
     ) { }
 
     async getUserLikes(userId: string) {
-        const user = await this.userModel.findById(userId).populate('likes');
+
+        const cachedLikes = await this.redisService.client.get(`user:${userId}:likes`);
+        if (cachedLikes) {
+            return JSON.parse(cachedLikes);
+        }
+        const user = await this.userModel.findById(userId);
         if (!user) {
             throw new Error(`Usuario con id ${userId} no encontrado`);
         }
@@ -54,6 +61,18 @@ export class LikesService {
         user.likes.push(publicacionSummary as any);
         await user.save();
 
+        await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
+        await this.redisService.client.del('publicaciones:all');
+        //hace falta el publicaciones de un usuario pero aqui no se cual es el usuario que creo la publicación aun
+        await this.redisService.client.del(`user:${userId}`);
+        await this.redisService.client.del(`profile:${userId}`);
+        await this.redisService.client.del(`user:email:${user.email}`);
+
+        await this.redisService.client.set(`publicacion:${publicacion._id.toString()}`, JSON.stringify(publicacion), 'EX', 6000);
+        await this.redisService.client.set(`user:${userId}`, JSON.stringify(user), 'EX', 6000);
+        await this.redisService.client.set(`profile:${userId}`, JSON.stringify(user), 'EX', 6000);
+        await this.redisService.client.set(`user:email:${user.email}`, JSON.stringify(user), 'EX', 6000);
+
         return { message: 'Post liked successfully' };
     }
 
@@ -75,6 +94,19 @@ export class LikesService {
 
         user.likes = user.likes.filter(publicacion => publicacion._id.toString() !== postId);
         await user.save();
+
+        await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
+        await this.redisService.client.del('publicaciones:all');
+        //hace falta el publicaciones de un usuario pero aqui no se cual es el usuario que creo la publicación aun
+        await this.redisService.client.del(`user:${userId}`);
+        await this.redisService.client.del(`profile:${userId}`);
+        await this.redisService.client.del(`user:email:${user.email}`);
+
+        await this.redisService.client.set(`publicacion:${publicacion._id.toString()}`, JSON.stringify(publicacion), 'EX', 6000);
+        await this.redisService.client.set(`user:${userId}`, JSON.stringify(user), 'EX', 6000);
+        await this.redisService.client.set(`profile:${userId}`, JSON.stringify(user), 'EX', 6000);
+        await this.redisService.client.set(`user:email:${user.email}`, JSON.stringify(user), 'EX', 6000);
+
 
         return { message: 'Post unliked successfully' };
     }
