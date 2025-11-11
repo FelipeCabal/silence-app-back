@@ -24,6 +24,7 @@ import { RedisModule } from '../redis/redis.module';
       }
     ]),
     forwardRef(() => ChatsModule),
+    RedisModule
   ],
   controllers: [UsersController, SolicitudesController],
   providers: [UsersService, SolicitudesAmistadService],
