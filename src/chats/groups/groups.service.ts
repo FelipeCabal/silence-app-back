@@ -13,6 +13,7 @@ import { GrupoResponseDto } from '../response/group.response';
 import { User } from 'src/users/entities/user.model';
 import { UsersService } from 'src/users/services/users.service';
 import { Role } from 'src/config/enums/roles.enum';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class GroupService {
@@ -21,32 +22,33 @@ export class GroupService {
     @InjectModel(InvitacionesGrupos.name)
     private readonly invitacionesModel: Model<InvitacionesGrupos>,
     private readonly userService: UsersService,
-  ) {}
+    private readonly redisService: RedisService, // Inject RedisService
+  ) { }
 
   async create(dto: CreateGrupoDto, creatorId: string) {
     const users = await this.gruposModel.db
-    .collection('users')
-    .findOne({ _id: new Types.ObjectId(creatorId) });
+      .collection('users')
+      .findOne({ _id: new Types.ObjectId(creatorId) });
 
-  if (!users) throw new NotFoundException('Usuario no encontrado');
+    if (!users) throw new NotFoundException('Usuario no encontrado');
 
- const miembro = {
-    user: {
-      _id: users._id,
-      username: users.username,
-      nombre: users.nombre,
-      avatar: users.avatar ?? null,
-    },
-    rol: Role.Admin, 
-  };
+    const miembro = {
+      user: {
+        _id: users._id,
+        username: users.username,
+        nombre: users.nombre,
+        avatar: users.avatar ?? null,
+      },
+      rol: Role.Admin,
+    };
 
-  const grupo = await this.gruposModel.create({
-    ...dto,
-    members: [miembro], 
-    creatorId: new Types.ObjectId(creatorId),
-  });
+    const grupo = await this.gruposModel.create({
+      ...dto,
+      members: [miembro],
+      creatorId: new Types.ObjectId(creatorId),
+    });
 
-  return GrupoResponseDto.fromModel(grupo);
+    return GrupoResponseDto.fromModel(grupo);
   }
 
 
@@ -72,10 +74,12 @@ export class GroupService {
 
     await this.invitacionesModel.deleteMany({ grupo: id });
 
+    await this.redisService.client.del(`group:${id}`);
+
     return { deleted: true };
   }
 
-   async addUserToGroup(groupId: string, userId: string) {
+  async addUserToGroup(groupId: string, userId: string) {
     const grupoObjectId = new Types.ObjectId(groupId);
     const userObjectId = new Types.ObjectId(userId);
 
@@ -103,11 +107,13 @@ export class GroupService {
         nombre: user.nombre,
         avatar: user.imagen ?? null,
       },
-      rol: Role.Member, 
+      rol: Role.Member,
     };
 
     grupo.members.push(newMember);
     await grupo.save();
+
+    await this.redisService.client.del(`group:${groupId}:members`);
 
     return GrupoResponseDto.fromModel(grupo);
   }

@@ -19,4 +19,4 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
     logging: false,
 }
 
-export const mongooseConfigUri: string = 'mongodb+srv://felipecabal_db_user:mayo2004@cluster0.b2xtlkq.mongodb.net/' //|| process.env.MONGO_URL  ;
+export const mongooseConfigUri: string = process.env.MONGO_URL;
