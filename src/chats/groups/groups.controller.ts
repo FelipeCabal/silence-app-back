@@ -13,6 +13,7 @@ import {
   ApiOperation,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GroupService } from './groups.service';
@@ -20,9 +21,10 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 
 @Controller('groups')
 @ApiTags('groups')
- @UseGuards(AuthGuard) 
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 export class GroupsController {
-  constructor(private readonly groupService: GroupService) {}
+  constructor(private readonly groupService: GroupService) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
@@ -38,7 +40,7 @@ export class GroupsController {
     };
   }
 
- 
+
   @Get()
   @ApiOperation({ summary: 'Obtener todos los grupos' })
   async findAll() {

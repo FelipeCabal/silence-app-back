@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Request, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { LikesService } from "./likes.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { get, request } from "http";
@@ -8,10 +8,11 @@ import { PublicacionResponseDto } from "src/publicaciones/dto/responses/publicac
 
 @Controller("likes")
 @ApiTags('Likes')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 export class LikesController {
     constructor(private readonly likesService: LikesService) { }
 
-    @UseGuards(AuthGuard)
     @Get()
     @ApiOperation({ summary: 'Get all my likes' })
     @ApiResponse({ status: 200, type: [PublicacionResponseDto] })
@@ -22,7 +23,6 @@ export class LikesController {
         return this.likesService.getUserLikes(req.user.id);
     }
 
-    @UseGuards(AuthGuard)
     @Post('like/:postId')
     @ApiParam({ name: 'postId', description: 'ID of the post to like' })
     @ApiOperation({ summary: 'Like a post' })
@@ -35,7 +35,6 @@ export class LikesController {
         return this.likesService.likePost(postId, req.user.id);
     }
 
-    @UseGuards(AuthGuard)
     @Post('unlike/:postId')
     @ApiParam({ name: 'postId', description: 'ID of the post to unlike' })
     @ApiOperation({ summary: 'Unlike a post' })

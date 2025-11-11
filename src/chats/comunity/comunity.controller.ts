@@ -13,6 +13,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { CreateComunidadDto } from '../request/community.dto';
@@ -20,9 +21,10 @@ import { CommunityService } from './community.service';
 
 @Controller('community')
 @ApiTags('community')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class ComunidadesController {
-  constructor(private readonly communityService: CommunityService) {}
+  constructor(private readonly communityService: CommunityService) { }
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las comunidades' })
