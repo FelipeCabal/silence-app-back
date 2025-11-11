@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Publicacion } from 'src/publicaciones/entities/publicacion.schema';
 import { ComentarioResponseDto } from './comentario-reponse.dto';
+import { Types } from 'mongoose';
 
 export class PublicacionResponseDto {
   @ApiProperty({
@@ -53,6 +54,12 @@ export class PublicacionResponseDto {
   createdAt: Date;
 
   @ApiProperty({
+    description: 'Usuarios que dieron like a la publicación',
+    example: [],
+  })
+  likes: Types.ObjectId[];
+
+  @ApiProperty({
     description: 'Fecha de actualización de la publicación',
     example: '2023-08-30T12:34:56Z',
   })
@@ -68,6 +75,7 @@ export class PublicacionResponseDto {
     );
     dto.cantLikes = model.cantLikes ?? 0;
     dto.cantComentarios = model.cantComentarios ?? 0;
+    dto.likes = model.likes ?? [];
     dto.esAnonimo = model.esAnonimo;
     dto.createdAt = model.createdAt;
     dto.updatedAt = model.updatedAt;

@@ -1,46 +1,49 @@
-import { Controller, Post, Param, UseGuards, Req, Get } from '@nestjs/common';
-import { LikesService } from './likes.service';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Request, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { LikesService } from "./likes.service";
+import { AuthGuard } from "src/auth/guards/auth.guard";
+import { get, request } from "http";
+import { PublicacionResponseDto } from "src/publicaciones/dto/responses/publicacion-response.dto";
 
-@Controller('likes')
-@ApiTags('likes')
+
+@Controller("likes")
+@ApiTags('Likes')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class LikesController {
-  constructor(private readonly likesService: LikesService) { }
+    constructor(private readonly likesService: LikesService) { }
 
-  @Post(':postId')
-  @ApiOperation({ summary: "Toggle like" })
-  async manejoLikes(
-    @Param('postId') postId: number,
-    @Req() req: any
-  ) {
-    const userId = req.user;
-    return this.likesService.manejoLikes(userId.id, postId);
-  }
+    @Get()
+    @ApiOperation({ summary: 'Get all my likes' })
+    @ApiResponse({ status: 200, type: [PublicacionResponseDto] })
+    @ApiResponse({ status: 404, description: 'No likes found' })
+    async getUserLikes(
+        @Request() req: any
+    ) {
+        return this.likesService.getUserLikes(req.user.id);
+    }
 
-  @Get(':postId')
-  @ApiOperation({ summary: "get all posts likes" })
-  async findAllLikes(
-    @Param('postId') postId: number
-  ) {
-    return this.likesService.findAllLikes(postId);
-  }
+    @Post('like/:postId')
+    @ApiParam({ name: 'postId', description: 'ID of the post to like' })
+    @ApiOperation({ summary: 'Like a post' })
+    @ApiResponse({ status: 200, description: 'Post liked successfully' })
+    @ApiResponse({ status: 404, description: 'Post not found' })
+    async likePost(
+        @Param('postId') postId: string,
+        @Request() req: any
+    ) {
+        return this.likesService.likePost(postId, req.user.id);
+    }
 
-  @Get('like/:likeId')
-  @ApiOperation({ summary: "get one like" })
-  async findOneLike(
-    @Param('likeId') likeId: number
-  ) {
-    return this.likesService.findOneLike(likeId);
-  }
-
-  @Get('user/:userId')
-  async findLikesByUser(
-    @Param('userId') userId: number,
-    @Req() req: any
-  ) {
-    const requesterId = req.user.id;
-    return this.likesService.findLikesByUser(userId, requesterId)
-  }
+    @Post('unlike/:postId')
+    @ApiParam({ name: 'postId', description: 'ID of the post to unlike' })
+    @ApiOperation({ summary: 'Unlike a post' })
+    @ApiResponse({ status: 200, description: 'Post unliked successfully' })
+    @ApiResponse({ status: 404, description: 'Post not found' })
+    async unlikePost(
+        @Param('postId') postId: string,
+        @Request() req: any
+    ) {
+        return this.likesService.unlikePost(postId, req.user.id);
+    }
 }

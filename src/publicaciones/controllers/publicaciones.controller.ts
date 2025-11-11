@@ -8,17 +8,19 @@ import {
   Delete,
   Request,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicacionesService } from '../services/publicaciones.service';
 import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
 import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 @Controller('posts')
 @ApiTags('Posts')
 export class PublicacionesController {
-  constructor(private readonly publicacionesService: PublicacionesService) {}
+  constructor(private readonly publicacionesService: PublicacionesService) { }
 
   /**
    * ENDPOINT to create a new post
@@ -32,6 +34,8 @@ export class PublicacionesController {
     type: PublicacionResponseDto,
     description: 'The post has been successfully created.',
   })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   create(@Body() createPublicacionesDto: CreatePublicacionDto) {
     return this.publicacionesService.create(createPublicacionesDto);
   }
@@ -111,6 +115,8 @@ export class PublicacionesController {
     description: 'The post has been successfully updated.',
   })
   @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   async update(
     @Param('id') id: string,
     @Body() updatePublicacionesDto: UpdatePublicacionDto,
@@ -133,6 +139,8 @@ export class PublicacionesController {
   @Delete(':id')
   @ApiParam({ name: 'id', description: 'ID of the post to delete' })
   @ApiOperation({ summary: 'Delete a post' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
   async remove(@Param('id') id: string) {
     const post = await this.publicacionesService.remove(id);
 

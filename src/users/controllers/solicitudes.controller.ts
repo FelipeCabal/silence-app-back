@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Patch, Post, Request, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SolicitudesAmistadService } from "../services/solicitudesAmistad.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { Status } from "src/config/enums/status.enum";
 
 @Controller('friend-request')
 @ApiTags('solicitudes de amistad')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class SolicitudesController {
     constructor(

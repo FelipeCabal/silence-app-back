@@ -8,24 +8,24 @@ import { typeOrmConfig, mongooseConfigUri } from './config/data.source';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
-//import { LikesModule } from './likes/likes.module';
 import { ChatsModule } from './chats/chats.module';
+import { LikesModule } from './likes/likes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-   // TypeOrmModule.forRoot(typeOrmConfig),
+    // TypeOrmModule.forRoot(typeOrmConfig),
     MongooseModule.forRoot(mongooseConfigUri),
     PublicacionesModule,
     UsersModule,
     AuthModule,
-    //LikesModule,
+    LikesModule,
     ChatsModule
   ],
   controllers: [AppController],
   providers: [AppService],
-  exports: [ MongooseModule],
+  exports: [MongooseModule],
 })
-export class AppModule {}
+export class AppModule { }

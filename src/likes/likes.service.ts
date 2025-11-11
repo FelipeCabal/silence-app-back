@@ -1,113 +1,81 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Like } from './like.entity';
-import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
-import { Repository } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
+import { ConflictException } from "@nestjs/common";
+import { Publicacion } from "src/publicaciones/entities/publicacion.schema";
+import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
+import { UserSchema } from "src/users/entities/users.schema";
 
-@Injectable()
 export class LikesService {
+    constructor(
+        @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
+        @InjectModel(Publicacion.name) private readonly publicacionModel: Model<Publicacion>,
+    ) { }
 
-  constructor(
-    @InjectRepository(Like)
-    private readonly likeRepository: Repository<Like>,
-    @InjectRepository(Publicaciones)
-    private readonly publicacionesRepository: Repository<Publicaciones>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>
-  ) { }
-
-  async manejoLikes(userId: number, publicacionesId: number) {
-    const usuario = await this.userRepository.findOne({ where: { id: userId } });
-    const publicaciones = await this.publicacionesRepository.findOne({ where: { id: publicacionesId.toString() } });
-
-    if (!usuario || !publicaciones) {
-      throw new HttpException("user or post not found", HttpStatus.NOT_FOUND);
-    }
-
-    const existeLike = await this.likeRepository.findOne({
-      where: { user: { id: userId }, publicaciones: { id: publicacionesId.toString() } }
-    });
-
-    if (existeLike) {
-      await this.likeRepository.remove(existeLike);
-      return 'se eliminó el like del post';
-    }
-    else {
-      const newLike = this.likeRepository.create({
-        user: { id: userId },
-        publicaciones: {
-          id: publicacionesId.toString()
+    async getUserLikes(userId: string) {
+        const user = await this.userModel.findById(userId).populate('likes');
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
         }
-      });
-
-      await this.likeRepository.save(newLike);
-
-      return newLike;
-    }
-  }
-
-  async findAllLikes(postId: number) {
-
-    const post = await this.publicacionesRepository.findOne({
-      where: { id: postId.toString() }
-    })
-
-    if (!post) {
-      throw new HttpException("post not found", HttpStatus.NOT_FOUND);
+        return user.likes;
     }
 
-    const likes = await this.likeRepository
-      .createQueryBuilder('like')
-      .leftJoinAndSelect('like.user', 'users')
-      .where('like.publicacionesId = :postId', { postId })
-      .getMany()
+    async likePost(postId: string, userId: string) {
+        const user = await this.userModel.findById(userId);
+        const publicacion = await this.publicacionModel.findById(postId);
+        const publicacionSummary = PublicacionModel.fromModel(publicacion);
 
-    if (likes.length === 0) {
-      throw new HttpException("likes not found", HttpStatus.NOT_FOUND);
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
+        }
+
+        if (!publicacion) {
+            throw new Error(`Publicación con id ${postId} no encontrada`);
+        }
+
+        const userObjectId = new Types.ObjectId(userId);
+
+        const alreadyLikedPost = publicacion.likes?.some((id: any) => {
+            return id?.toString?.() === userId;
+        });
+
+        const alreadyLikedInUser = user.likes?.some((post: any) => {
+            return post._id?.toString?.() === postId;
+        });
+
+
+        if (alreadyLikedPost || alreadyLikedInUser) {
+            throw new ConflictException('El usuario ya dio like a esta publicación');
+        }
+
+        publicacion.likes.push(userObjectId);
+        publicacion.cantLikes = publicacion.likes.length;
+        await publicacion.save();
+
+        user.likes.push(publicacionSummary as any);
+        await user.save();
+
+        return { message: 'Post liked successfully' };
     }
 
-    return likes;
-  }
+    async unlikePost(postId: string, userId: string) {
+        const user = await this.userModel.findById(userId);
+        const publicacion = await this.publicacionModel.findById(postId);
 
-  async findOneLike(likeId: number) {
-    const like = await this.likeRepository.findOne({
-      where: { id: likeId }
-    })
+        if (!user) {
+            throw new Error(`Usuario con id ${userId} no encontrado`);
+        }
 
-    if (!like) {
-      throw new HttpException("like not found", HttpStatus.NOT_FOUND);
+        if (!publicacion) {
+            throw new Error(`Publicación con id ${postId} no encontrada`);
+        }
+
+        publicacion.likes = publicacion.likes.filter(user => user.toString() !== userId);
+        publicacion.cantLikes = publicacion.likes.length;
+        await publicacion.save();
+
+        user.likes = user.likes.filter(publicacion => publicacion._id.toString() !== postId);
+        await user.save();
+
+        return { message: 'Post unliked successfully' };
     }
-
-    return like;
-  }
-
-  async findLikesByUser(userId: number, requesterId: number) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      throw new HttpException('user not found', HttpStatus.NOT_FOUND);
-    }
-
-    let likes = []
-
-    if (user.showLikes === false) {
-      if (userId !== requesterId) {
-        return "No hay actividad para mostrar"
-      }
-    }
-    else {
-
-      likes = await this.publicacionesRepository
-        .createQueryBuilder('post')
-        .innerJoin('post.likes', 'like')
-        .leftJoinAndSelect('post.user', 'user')
-        .where("like.userId = :userId", { userId })
-        .getMany();
-
-      return likes;
-    }
-  }
 }

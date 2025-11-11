@@ -15,6 +15,8 @@ import {
 import { SolicitudAmistad } from './solicitud.entity';
 import { Like } from 'src/likes/like.entity';
 import { MiembrosComunidades } from 'src/chats/entities/miembrosComunidad.entity';
+import { PublicacionModel } from 'src/publicaciones/models/publciacion-summary.model';
+import { Grupos } from 'src/chats/schemas/groups.schema';
 
 @Entity('users')
 export class User {
@@ -64,9 +66,8 @@ export class User {
   )
   recibeSolicitudAmistad: SolicitudAmistad;
 
-  @OneToMany(() => Like, (likes) => likes.user)
-  likes: Like[];
+  likes: PublicacionModel[];
 
-  /*     @ManyToMany(() => Grupos, (grupo) => grupo.miembros)
-    grupos: Grupos[]; */
+  @ManyToMany(() => Grupos, (grupo) => grupo.members)
+  grupos: Grupos[];
 }

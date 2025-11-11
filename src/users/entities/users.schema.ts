@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document } from "mongoose";
+import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
 
 @Schema({ collection: 'users', timestamps: true })
 export class UserSchema extends Document {
@@ -74,10 +75,10 @@ export class UserSchema extends Document {
     solicitudesAmistad: Record<string, any>;
 
     @Prop({
-        type: [{ postId: String, fecha: Date }],
+        type: [PublicacionModel],
         default: [],
     })
-    likes: Array<Record<string, any>>;
+    likes: PublicacionModel[];
 
 
 }
