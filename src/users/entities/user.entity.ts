@@ -1,60 +1,73 @@
-import { Exclude } from "class-transformer";
-import { Comunidades, Grupos } from "src/chats/entities/chats.entity";
-import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity";
-import { Publicaciones } from "src/publicaciones/entities/publicaciones.entity";
-import { Column, Entity, IsNull, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { SolicitudAmistad } from "./solicitud.entity";
-import { Like } from "src/likes/like.entity";
-import { MiembrosComunidades } from "src/chats/entities/miembrosComunidad.entity";
+import { Exclude } from 'class-transformer';
+
+/* import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity"; */
+
+import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
+import {
+  Column,
+  Entity,
+  IsNull,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { SolicitudAmistad } from './solicitud.entity';
+import { Like } from 'src/likes/like.entity';
+import { MiembrosComunidades } from 'src/chats/entities/miembrosComunidad.entity';
+import { PublicacionModel } from 'src/publicaciones/models/publciacion-summary.model';
+import { Grupos } from 'src/chats/schemas/groups.schema';
 
 @Entity('users')
 export class User {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @PrimaryGeneratedColumn()
-    id: number
+  @Column()
+  nombre: string;
 
-    @Column()
-    nombre: string
+  @Column()
+  email: string;
 
-    @Column()
-    email: string
+  @Column({ type: 'date' })
+  fechaNto: Date;
 
-    @Column({ type: 'date' })
-    fechaNto: Date
+  @Column()
+  sexo: string;
 
-    @Column()
-    sexo: string
+  @Exclude()
+  @Column({ unique: true })
+  password: string;
 
-    @Exclude()
-    @Column({ unique: true })
-    password: string
+  @Column()
+  pais: string;
 
-    @Column()
-    pais: string
+  @Column({ nullable: true })
+  imagen: string;
 
-    @Column({ nullable: true })
-    imagen: string
+  @Column({ default: true })
+  showLikes: boolean;
 
+  @OneToMany(() => Publicaciones, (publicaciones) => publicaciones.user)
+  publicaciones: Publicaciones[];
 
-    @Column({ default: true })
-    showLikes: boolean
+  @OneToMany(() => MiembrosComunidades, (miembro) => miembro.usuario)
+  comunidades: MiembrosComunidades[];
 
+  @OneToMany(
+    () => SolicitudAmistad,
+    (solicitudAmistad) => solicitudAmistad.userEnvia,
+  )
+  enviaSolicitudAmistad: SolicitudAmistad;
 
-    @OneToMany(() => Publicaciones, (publicaciones) => publicaciones.user)
-    publicaciones: Publicaciones[]
+  @OneToMany(
+    () => SolicitudAmistad,
+    (solicitudAmistad) => solicitudAmistad.userRecibe,
+  )
+  recibeSolicitudAmistad: SolicitudAmistad;
 
-    @OneToMany(() => MiembrosComunidades, (miembro) => miembro.usuario)
-    comunidades: MiembrosComunidades[];
+  likes: PublicacionModel[];
 
-    @OneToMany(() => SolicitudAmistad, solicitudAmistad => solicitudAmistad.userEnvia)
-    enviaSolicitudAmistad: SolicitudAmistad
-
-    @OneToMany(() => SolicitudAmistad, solicitudAmistad => solicitudAmistad.userRecibe)
-    recibeSolicitudAmistad: SolicitudAmistad
-
-    @OneToMany(() => Like, (likes) => likes.user)
-    likes: Like[]
-
-    @ManyToMany(() => Grupos, (grupo) => grupo.miembros)
-    grupos: Grupos[];
+  @ManyToMany(() => Grupos, (grupo) => grupo.members)
+  grupos: Grupos[];
 }

@@ -1,12 +1,12 @@
 import { UsersService } from "./users.service";
 import { forwardRef, HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Status } from "src/config/enums/status.enum";
-import { PrivateChatsService } from "src/chats/services/private-chats.service";
 import { InjectModel } from "@nestjs/mongoose";
 import { FriendRequest } from "../entities/solicitud.schema";
 import { Model } from "mongoose";
 import { UserSchema } from "../entities/users.schema";
 import { RedisService } from "../../redis/redis.service";
+import { ChatPrivateService } from "src/chats/chat-private/chat-private.service";
 
 @Injectable()
 export class SolicitudesAmistadService {
@@ -16,8 +16,8 @@ export class SolicitudesAmistadService {
 
         @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
 
-        @Inject(forwardRef(() => PrivateChatsService))
-        private readonly privateChatsService: PrivateChatsService,
+        @Inject(forwardRef(() => ChatPrivateService))
+        private readonly privateChatsService: ChatPrivateService,
 
         @InjectModel(FriendRequest.name)
         private readonly requestModel: Model<FriendRequest>,
