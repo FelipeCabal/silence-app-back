@@ -7,13 +7,9 @@ import {
   Request,
   Get,
   UseGuards,
+  Req,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiParam,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { CreateComunidadDto } from '../request/community.dto';
 import { CommunityService } from './community.service';
@@ -24,16 +20,20 @@ import { CommunityService } from './community.service';
 export class ComunidadesController {
   constructor(private readonly communityService: CommunityService) {}
 
-  @Get()
-  @ApiOperation({ summary: 'Obtener todas las comunidades' })
-  async findAll() {
-    const data = await this.communityService.findAll();
-    return {
-      err: false,
-      msg: 'Comunidades obtenidas correctamente',
-      data,
-    };
-  }
+@Get()
+@ApiOperation({ summary: 'Obtener comunidades a las que pertenece el usuario autenticado' })
+async findAll(@Req() req: any) {
+  const userId = req.user.id; 
+
+  const data = await this.communityService.findAll(userId);
+
+  return {
+    err: false,
+    msg: 'Comunidades obtenidas correctamente',
+    data,
+  };
+}
+
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener comunidad por ID' })
@@ -76,15 +76,21 @@ export class ComunidadesController {
   @Delete(':id/members/:userId')
   @ApiOperation({ summary: 'Eliminar miembro de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  @ApiParam({ name: 'userId', type: String, description: 'ID del miembro a eliminar' })
+  @ApiParam({
+    name: 'userId',
+    type: String,
+    description: 'ID del miembro a eliminar',
+  })
   async removeMember(
     @Param('id') communityId: string,
     @Param('userId') userId: string,
+    @Req() req: any,
   ) {
-    await this.communityService.remove(communityId, userId);
+    const requesterId = req.user?.id;
+    await this.communityService.remove(communityId, userId, requesterId);
     return {
       err: false,
-      msg: 'Miembro eliminado correctamente',
+      msg: 'Miembro eliminado correctamente por un administrador',
       data: null,
     };
   }
@@ -98,6 +104,24 @@ export class ComunidadesController {
       err: false,
       msg: 'Comunidad eliminada correctamente',
       data,
+    };
+  }
+
+  @Delete(':id/leave')
+  @ApiOperation({ summary: 'Salir de una comunidad' })
+  @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
+  async leaveCommunity(@Param('id') communityId: string, @Req() req: any) {
+    const userId = req.user?.id;
+
+    const result = await this.communityService.leaveCommunity(
+      communityId,
+      userId,
+    );
+
+    return {
+      err: false,
+      msg: result.message,
+      data: null,
     };
   }
 }

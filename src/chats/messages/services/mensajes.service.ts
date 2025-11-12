@@ -63,7 +63,7 @@ export class MessagesService {
       const chat = await this.groupChatService.findById(chatId);
 
       const isMember = chat.members.some(
-        (m) => m._id.toString() === userId,
+        (m) => m.user._id.toString() === userId,
       );
 
       if (!isMember)
@@ -75,7 +75,7 @@ export class MessagesService {
 
       const isAllowed = chat.miembros.some(
         (m) =>
-          m._id.toString() === userId && ['Admin', 'Owner'].includes(m.rol),
+          m.user._id.toString() === userId && ['Admin', 'Owner'].includes(m.rol),
       );
 
       if (!isAllowed)

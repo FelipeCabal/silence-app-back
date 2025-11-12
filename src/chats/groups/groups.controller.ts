@@ -7,6 +7,7 @@ import {
   Delete,
   Request,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,16 +40,19 @@ export class GroupsController {
   }
 
  
-  @Get()
-  @ApiOperation({ summary: 'Obtener todos los grupos' })
-  async findAll() {
-    const data = await this.groupService.findAll();
-    return {
-      err: false,
-      msg: 'Grupos obtenidos correctamente',
-      data,
-    };
-  }
+@Get()
+@ApiOperation({ summary: 'Obtener los grupos a los que pertenece el usuario autenticado' })
+async findAll(@Req() req: any) {
+  const userId = req.user?.id; 
+  const data = await this.groupService.findAll(userId);
+
+  return {
+    err: false,
+    msg: 'Grupos obtenidos correctamente',
+    data,
+  };
+}
+
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener grupo por ID' })
@@ -65,11 +69,55 @@ export class GroupsController {
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar grupo' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
-  async remove(@Param('id') id: string) {
-    const data = await this.groupService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user.sub;
+
+    const data = await this.groupService.remove(id, userId);
     return {
       err: false,
       msg: 'Grupo eliminado correctamente',
+      data,
+    };
+  }
+
+  @Delete(':id/leave')
+  @ApiOperation({
+    summary: 'Salir del grupo (si eres admin se reasigna el rol si hay más miembros)',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
+  async leaveGroup(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user._id;
+
+    const data = await this.groupService.leaveGroup(id, userId);
+    return {
+      err: false,
+      msg: data.message,
+      data,
+    };
+  }
+
+  @Delete(':groupId/members/:memberId')
+  @ApiOperation({
+    summary: 'Eliminar miembro de un grupo (solo administradores)',
+  })
+  @ApiParam({ name: 'groupId', type: String, description: 'ID del grupo' })
+  @ApiParam({ name: 'memberId', type: String, description: 'ID del miembro a eliminar' })
+  async removeMember(
+    @Param('groupId') groupId: string,
+    @Param('memberId') memberId: string,
+    @Req() req: any,
+  ) {
+    const requesterId = req.user._id;
+
+    const data = await this.groupService.removeMember(
+      groupId,
+      memberId,
+      requesterId,
+    );
+
+    return {
+      err: false,
+      msg: data.message,
       data,
     };
   }

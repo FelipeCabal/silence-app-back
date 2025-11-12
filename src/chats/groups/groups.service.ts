@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -52,10 +54,19 @@ export class GroupService {
 
 
 
-  async findAll() {
-    const grupos = await this.gruposModel.find().lean();
-    return grupos.map((g) => GrupoResponseDto.fromModel(g));
+async findAll(userId: string) {
+  const userObjectId = new Types.ObjectId(userId);
+
+  const grupos = await this.gruposModel
+    .find({ 'miembros.user._id': userObjectId })
+    .lean();
+
+  if (!grupos.length) {
+    return [];
   }
+  return grupos.map((g) => GrupoResponseDto.fromModel(g));
+}
+
 
   async findById(id: string) {
     const grupo = await this.gruposModel.findById(id).lean();
@@ -65,15 +76,26 @@ export class GroupService {
     return GrupoResponseDto.fromModel(grupo);
   }
 
-  async remove(id: string) {
-    const deleted = await this.gruposModel.findByIdAndDelete(id);
+  async remove(id: string, userId: string) {
+  const groupObjectId = new Types.ObjectId(id);
+  const userObjectId = new Types.ObjectId(userId);
 
-    if (!deleted) throw new NotFoundException('Grupo no encontrado.');
+  const grupo = await this.gruposModel.findById(groupObjectId).lean();
 
-    await this.invitacionesModel.deleteMany({ grupo: id });
+  if (!grupo) throw new NotFoundException('Grupo no encontrado.');
 
-    return { deleted: true };
+  const admin = grupo.members.find(m => m.rol === 'admin');
+  if (!admin) throw new ForbiddenException('Este grupo no tiene administrador asignado.');
+
+  if (admin.user._id.toString() !== userObjectId.toString()) {
+    throw new ForbiddenException('No tienes permiso para eliminar este grupo.');
   }
+
+  await this.gruposModel.findByIdAndDelete(groupObjectId);
+  await this.invitacionesModel.deleteMany({ grupo: groupObjectId });
+
+  return { deleted: true };
+}
 
    async addUserToGroup(groupId: string, userId: string) {
     const grupoObjectId = new Types.ObjectId(groupId);
@@ -111,4 +133,111 @@ export class GroupService {
 
     return GrupoResponseDto.fromModel(grupo);
   }
+
+
+  async leaveGroup(groupId: string, userId: string) {
+  const groupObjectId = new Types.ObjectId(groupId);
+  const userObjectId = new Types.ObjectId(userId);
+
+  const grupo = await this.gruposModel.findById(groupObjectId);
+
+  if (!grupo) {
+    throw new NotFoundException('Grupo no encontrado');
+  }
+
+  const miembro = grupo.members.find(
+    (m) => m.user._id.toString() === userObjectId.toString(),
+  );
+
+  if (!miembro) {
+    throw new NotFoundException('No perteneces a este grupo');
+  }
+
+  if (miembro.rol === 'admin') {
+    const admins = grupo.members.filter((m) => m.rol === 'admin');
+
+    if (admins.length === 1) {
+      const otroMiembro = grupo.members.find(
+        (m) => m.user._id.toString() !== userObjectId.toString(),
+      );
+
+      if (otroMiembro) {
+        otroMiembro.rol = 'admin';
+        await grupo.save(); 
+      } else {
+        throw new BadRequestException(
+          'No puedes salir, no hay más miembros para asignar como admin',
+        );
+      }
+    }
+  }
+
+  grupo.members = grupo.members.filter(
+    (m) => m.user._id.toString() !== userObjectId.toString(),
+  );
+
+  await grupo.save();
+
+  return {
+    left: true,
+    message: 'Has salido del grupo correctamente',
+  };
+}
+
+
+
+
+async removeMember(groupId: string, memberId: string, requesterId: string) {
+  const groupObjectId = new Types.ObjectId(groupId);
+  const memberObjectId = new Types.ObjectId(memberId);
+  const requesterObjectId = new Types.ObjectId(requesterId);
+
+  const grupo = await this.gruposModel.findById(groupObjectId);
+  if (!grupo) {
+    throw new NotFoundException('Grupo no encontrado');
+  }
+
+  const requester = grupo.members.find(
+    (m) => m.user._id.toString() === requesterObjectId.toString(),
+  );
+  if (!requester) {
+    throw new ForbiddenException('No perteneces a este grupo');
+  }
+
+  if (requester.rol !== 'admin') {
+    throw new ForbiddenException('Solo los administradores pueden eliminar miembros');
+  }
+
+  if (requesterId === memberId) {
+    throw new BadRequestException('No puedes eliminarte a ti mismo');
+  }
+
+  const miembroAEliminar = grupo.members.find(
+    (m) => m.user._id.toString() === memberObjectId.toString(),
+  );
+
+  if (!miembroAEliminar) {
+    throw new NotFoundException('El usuario no es miembro de este grupo');
+  }
+
+  if (miembroAEliminar.rol === 'admin') {
+    throw new ForbiddenException('No puedes eliminarte siendo admin');
+  }
+
+  const result = await this.gruposModel.updateOne(
+    { _id: groupObjectId },
+    { $pull: { members: { 'user._id': memberObjectId } } },
+  );
+
+  if (result.modifiedCount === 0) {
+    throw new BadRequestException('No se pudo eliminar el miembro');
+  }
+
+  return {
+    removed: true,
+    message: `Miembro eliminado correctamente`,
+  };
+}
+
+
 }
