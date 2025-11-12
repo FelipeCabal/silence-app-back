@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiBody,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GroupService } from './groups.service';
@@ -21,9 +22,11 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 
 @Controller('groups')
 @ApiTags('groups')
- @UseGuards(AuthGuard) 
+
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 export class GroupsController {
-  constructor(private readonly groupService: GroupService) {}
+  constructor(private readonly groupService: GroupService) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
@@ -54,6 +57,7 @@ async findAll(@Req() req: any) {
 }
 
 
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener grupo por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
@@ -73,6 +77,7 @@ async findAll(@Req() req: any) {
     const userId = req.user.sub;
 
     const data = await this.groupService.remove(id, userId);
+
     return {
       err: false,
       msg: 'Grupo eliminado correctamente',
@@ -121,4 +126,5 @@ async findAll(@Req() req: any) {
       data,
     };
   }
+
 }

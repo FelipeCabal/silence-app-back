@@ -16,7 +16,7 @@ export class MessagesService {
     private readonly privateChatsService: ChatPrivateService,
     private readonly groupChatService: GroupService,
     private readonly comunidadesService: CommunityService,
-  ) {}
+  ) { }
 
   async createMessage(dto: CreateMessageDto, userId: string) {
     const { message, chatId, chatType } = dto;

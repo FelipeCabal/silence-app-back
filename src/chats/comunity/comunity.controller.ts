@@ -7,16 +7,26 @@ import {
   Request,
   Get,
   UseGuards,
+
   Req,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { CreateComunidadDto } from '../request/community.dto';
 import { CommunityService } from './community.service';
 
 @Controller('community')
 @ApiTags('community')
+
 @UseGuards(AuthGuard)
+@ApiBearerAuth()
+
 export class ComunidadesController {
   constructor(private readonly communityService: CommunityService) {}
 
@@ -91,8 +101,7 @@ async findAll(@Req() req: any) {
     return {
       err: false,
       msg: 'Miembro eliminado correctamente por un administrador',
-      data: null,
-    };
+    }
   }
 
   @Delete(':id')
@@ -124,4 +133,5 @@ async findAll(@Req() req: any) {
       data: null,
     };
   }
+
 }

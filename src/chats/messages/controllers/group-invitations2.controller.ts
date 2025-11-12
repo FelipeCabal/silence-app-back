@@ -8,17 +8,21 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiParam, ApiResponse } from '@nestjs/swagger';
+
+import { ApiOperation, ApiTags, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GroupInvitationsService } from '../services/group-invitations.service2';
 
 @Controller('group-invitations')
 @ApiTags('Group Invitations')
+
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class InvitationsGroupController {
   constructor(
     private readonly groupInvitationsService: GroupInvitationsService,
   ) {}
+
 
   @Post(':groupId/send/:receiverId')
   @ApiOperation({ summary: 'Create a group invitation' })

@@ -11,14 +11,17 @@ import {
 } from '@nestjs/common';
 import { ChatPrivateService } from './chat-private.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { ApiBody, ApiOperation, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
+
+import { ApiBody, ApiOperation, ApiTags, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 
 @Controller('chat-privado')
 @ApiTags('private-chats')
+
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class ChatPrivateController {
-  constructor(private readonly chatPrivateService: ChatPrivateService) {}
+  constructor(private readonly chatPrivateService: ChatPrivateService) { }
 
   @Post()
   @ApiOperation({ summary: 'Crear chat privado entre dos usuarios' })
@@ -35,6 +38,7 @@ export class ChatPrivateController {
   @Get()
   @ApiOperation({ summary: 'Listar chats privados del usuario autenticado' })
   async findAllByUser( @Request() req: any) {
+
     const userId = req.user.id;
     const data = await this.chatPrivateService.findAllByUser(userId);
     return {

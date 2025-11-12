@@ -28,6 +28,8 @@ import { MessagesService } from './messages/services/mensajes.service';
 import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
 import { GroupInvitationsService } from './messages/services/group-invitations.service2';
 
+import { RedisModule } from 'src/redis/redis.module';
+
 @Module({
   imports: [
     forwardRef(() => UsersModule),
@@ -40,6 +42,7 @@ import { GroupInvitationsService } from './messages/services/group-invitations.s
       { name: MiembrosComunidades.name, schema: MiembrosComunidadesSchema },
       { name: FriendRequest.name, schema: FriendRequestSchema },
     ]),
+    RedisModule,
   ],
   controllers: [
     ChatPrivateController,

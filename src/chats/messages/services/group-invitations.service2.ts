@@ -14,6 +14,8 @@ import { Status } from 'src/config/enums/status.enum';
 import { InvitacionSimpleModel } from 'src/chats/models/InvitacionSimpleModel';
 import { GroupService } from 'src/chats/groups/groups.service';
 
+import { RedisService } from 'src/redis/redis.service';
+
 @Injectable()
 export class GroupInvitationsService {
   constructor(
@@ -21,7 +23,9 @@ export class GroupInvitationsService {
     private readonly groupInvitationModel: Model<InvitacionesGrupos>,
     private readonly usersService: UsersService,
     private readonly groupService: GroupService,
-  ) {}
+
+    private readonly redisService: RedisService,
+  ) { }
 
   async create(data: CreateInvitationDto): Promise<InvitacionSimpleModel> {
     const { senderId, receiverId, groupId } = data;
@@ -71,10 +75,12 @@ export class GroupInvitationsService {
       status: Status.Pendiente,
     });
 
+    await this.redisService.client.del(`groupInvitations:user:${receiverId}`);
+
     return InvitacionSimpleModel.fromEntity(newInvitation);
   }
 
-async accept(invitationId: string, userId: string): Promise<InvitacionSimpleModel> {
+  async accept(invitationId: string, userId: string): Promise<InvitacionSimpleModel> {
     const invitation = await this.groupInvitationModel.findById(invitationId);
 
     if (!invitation) {
@@ -100,6 +106,9 @@ async accept(invitationId: string, userId: string): Promise<InvitacionSimpleMode
       invitation.user._id.toString(),
     );
 
+    await this.redisService.client.del(`groupInvitations:user:${userId}`);
+    await this.redisService.client.del(`group:${invitation.group._id.toString()}:members`);
+
     return InvitacionSimpleModel.fromEntity(invitation);
   }
 
@@ -118,18 +127,41 @@ async accept(invitationId: string, userId: string): Promise<InvitacionSimpleMode
     }
 
     await this.groupInvitationModel.deleteOne({ _id: invitationId });
+
+    await this.redisService.client.del(`groupInvitations:user:${userId}`);
   }
 
   async findByUser(userId: string): Promise<InvitacionSimpleModel[]> {
+    const cacheKey = `groupInvitations:user:${userId}`;
+    const cached = await this.redisService.client.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const invitations = await this.groupInvitationModel.find({
       'user._id': userId,
     });
-    return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
+    const result = invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
+
+    await this.redisService.client.set(cacheKey, JSON.stringify(result), 'EX', 600);
+    return result;
   }
 
   async findOne(id: string): Promise<InvitacionSimpleModel | null> {
+    const cacheKey = `groupInvitations:invitation:${id}`;
+    const cached = await this.redisService.client.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const invitation = await this.groupInvitationModel.findById(id);
-    return invitation ? InvitacionSimpleModel.fromEntity(invitation) : null;
+    if (!invitation) {
+      return null;
+    }
+
+    const result = InvitacionSimpleModel.fromEntity(invitation);
+    await this.redisService.client.set(cacheKey, JSON.stringify(result), 'EX', 600);
+    return result;
   }
 
   async findSimpleByUser(userId: string): Promise<InvitacionSimpleModel[]> {

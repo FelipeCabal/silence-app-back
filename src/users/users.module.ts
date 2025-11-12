@@ -9,6 +9,7 @@ import { userModelSchema, UserSchema } from './entities/users.schema';
 import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema';
 import { User } from './entities/user.entity';
 import { ChatsModule } from 'src/chats/chats.module';
+<<<<<<< HEAD
 
 @Module({
   imports: [//TypeOrmModule.forFeature([User]),
@@ -27,5 +28,27 @@ import { ChatsModule } from 'src/chats/chats.module';
   controllers: [UsersController, SolicitudesController],
   providers: [UsersService, SolicitudesAmistadService],
   exports: [ MongooseModule, SolicitudesAmistadService, UsersService]
+=======
+import { RedisModule } from '../redis/redis.module';
+
+@Module({
+  imports: [//TypeOrmModule.forFeature([User]),
+    MongooseModule.forFeature([
+      {
+        name: UserSchema.name,
+        schema: userModelSchema,
+      },
+      {
+        name: FriendRequest.name,
+        schema: FriendRequestSchema
+      }
+    ]),
+    forwardRef(() => ChatsModule),
+    RedisModule
+  ],
+  controllers: [UsersController, SolicitudesController],
+  providers: [UsersService, SolicitudesAmistadService],
+  exports: [MongooseModule, SolicitudesAmistadService, UsersService]
+>>>>>>> 8b6e6c55cf90235b595a691e6d1681f8be32cc61
 })
 export class UsersModule { }

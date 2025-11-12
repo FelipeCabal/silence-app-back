@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Patch, Post, Request, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { SolicitudesAmistadService } from "../services/solicitudesAmistad.service";
 import { AuthGuard } from "src/auth/guards/auth.guard";
 import { Status } from "src/config/enums/status.enum";
 
 @Controller('friend-request')
 @ApiTags('solicitudes de amistad')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class SolicitudesController {
     constructor(
@@ -18,7 +19,7 @@ export class SolicitudesController {
         @Param('userRecibeId') userRecibeId: string,
         @Request() req: any
     ) {
-        const userEnviaId = req.user.id
+        const userEnviaId = req.user._id
         return this.solicitudesAmistadService.sendFriendRequest(userEnviaId, userRecibeId);
     }
 
@@ -27,7 +28,7 @@ export class SolicitudesController {
     async RequestsUser(
         @Request() req: any
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.solicitudesAmistadService.findUserRequests(userId);
     }
 
@@ -37,7 +38,7 @@ export class SolicitudesController {
     async receivedRequest(
         @Request() req: any
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.solicitudesAmistadService.findAllReceiveRequest(userId);
     }
 
@@ -46,7 +47,7 @@ export class SolicitudesController {
     async acceptedRequest(
         @Request() req: any
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.solicitudesAmistadService.findAcceptedFriendships(userId);
     }
 
@@ -57,7 +58,7 @@ export class SolicitudesController {
         @Request() req: any,
         @Body('newStatus') newStatus: Status
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.solicitudesAmistadService.updateRequest(requestId, userId, newStatus);
     }
 
@@ -67,7 +68,7 @@ export class SolicitudesController {
         @Param('requestId') requestId: string,
         @Request() req: any
     ) {
-        const userId = req.user.id
+        const userId = req.user._id
         return this.solicitudesAmistadService.deleteRequest(requestId, userId);
     }
 }

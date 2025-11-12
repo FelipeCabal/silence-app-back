@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   BadRequestException,
+
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -16,6 +17,8 @@ import { User } from 'src/users/entities/user.model';
 import { UsersService } from 'src/users/services/users.service';
 import { Role } from 'src/config/enums/roles.enum';
 
+import { RedisService } from 'src/redis/redis.service';
+
 @Injectable()
 export class GroupService {
   constructor(
@@ -23,32 +26,34 @@ export class GroupService {
     @InjectModel(InvitacionesGrupos.name)
     private readonly invitacionesModel: Model<InvitacionesGrupos>,
     private readonly userService: UsersService,
+        private readonly redisService: RedisService, 
+
   ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
     const users = await this.gruposModel.db
-    .collection('users')
-    .findOne({ _id: new Types.ObjectId(creatorId) });
+      .collection('users')
+      .findOne({ _id: new Types.ObjectId(creatorId) });
 
-  if (!users) throw new NotFoundException('Usuario no encontrado');
+    if (!users) throw new NotFoundException('Usuario no encontrado');
 
- const miembro = {
-    user: {
-      _id: users._id,
-      username: users.username,
-      nombre: users.nombre,
-      avatar: users.avatar ?? null,
-    },
-    rol: Role.Admin, 
-  };
+    const miembro = {
+      user: {
+        _id: users._id,
+        username: users.username,
+        nombre: users.nombre,
+        avatar: users.avatar ?? null,
+      },
+      rol: Role.Admin,
+    };
 
-  const grupo = await this.gruposModel.create({
-    ...dto,
-    members: [miembro], 
-    creatorId: new Types.ObjectId(creatorId),
-  });
+    const grupo = await this.gruposModel.create({
+      ...dto,
+      members: [miembro],
+      creatorId: new Types.ObjectId(creatorId),
+    });
 
-  return GrupoResponseDto.fromModel(grupo);
+    return GrupoResponseDto.fromModel(grupo);
   }
 
 
@@ -125,13 +130,15 @@ async findAll(userId: string) {
         nombre: user.nombre,
         avatar: user.imagen ?? null,
       },
+
       rol: Role.Member, 
+
     };
 
     grupo.members.push(newMember);
     await grupo.save();
-
     return GrupoResponseDto.fromModel(grupo);
+
   }
 
 
@@ -153,8 +160,8 @@ async findAll(userId: string) {
     throw new NotFoundException('No perteneces a este grupo');
   }
 
-  if (miembro.rol === 'admin') {
-    const admins = grupo.members.filter((m) => m.rol === 'admin');
+  if (miembro.rol === Role.Admin) {
+    const admins = grupo.members.filter((m) => m.rol === Role.Admin);
 
     if (admins.length === 1) {
       const otroMiembro = grupo.members.find(
@@ -162,7 +169,7 @@ async findAll(userId: string) {
       );
 
       if (otroMiembro) {
-        otroMiembro.rol = 'admin';
+        otroMiembro.rol = Role.Admin;
         await grupo.save(); 
       } else {
         throw new BadRequestException(
@@ -177,6 +184,8 @@ async findAll(userId: string) {
   );
 
   await grupo.save();
+    await this.redisService.client.del(`group:${groupId}:members`);
+
 
   return {
     left: true,
@@ -204,7 +213,7 @@ async removeMember(groupId: string, memberId: string, requesterId: string) {
     throw new ForbiddenException('No perteneces a este grupo');
   }
 
-  if (requester.rol !== 'admin') {
+  if (requester.rol !== Role.Admin) {
     throw new ForbiddenException('Solo los administradores pueden eliminar miembros');
   }
 
@@ -220,7 +229,7 @@ async removeMember(groupId: string, memberId: string, requesterId: string) {
     throw new NotFoundException('El usuario no es miembro de este grupo');
   }
 
-  if (miembroAEliminar.rol === 'admin') {
+  if (miembroAEliminar.rol === Role.Admin) {
     throw new ForbiddenException('No puedes eliminarte siendo admin');
   }
 
@@ -232,12 +241,12 @@ async removeMember(groupId: string, memberId: string, requesterId: string) {
   if (result.modifiedCount === 0) {
     throw new BadRequestException('No se pudo eliminar el miembro');
   }
+    await this.redisService.client.del(`group:${groupId}:members`);
+
 
   return {
     removed: true,
     message: `Miembro eliminado correctamente`,
   };
 }
-
-
-}
+  }

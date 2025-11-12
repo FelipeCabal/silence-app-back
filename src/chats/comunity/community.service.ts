@@ -12,6 +12,7 @@ import { Role } from 'src/config/enums/roles.enum';
 import { CreateComunidadDto } from '../request/community.dto';
 import { ComunidadResponseDto } from '../response/community.response';
 import { MiembrosComunidades } from '../schemas/miembros-community.schema';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class CommunityService {
@@ -20,7 +21,8 @@ export class CommunityService {
     private readonly comunidadesModel: Model<Comunidades>,
     @InjectModel(MiembrosComunidades.name)
     private readonly miembrosModel: Model<MiembrosComunidades>,
-  ) {}
+    private readonly redisService: RedisService,
+  ) { }
 
   async create(dto: CreateComunidadDto, userId: string) {
     const exists = await this.comunidadesModel.findOne({
@@ -123,6 +125,7 @@ export class CommunityService {
 
     const comunidad = await this.comunidadesModel.findById(communityObjectId);
 
+
     if (!comunidad) {
       throw new NotFoundException('Comunidad no encontrada');
     }
@@ -160,11 +163,12 @@ export class CommunityService {
       { _id: communityObjectId },
       { $set: { miembros: updatedMembers } },
     );
+    await this.redisService.client.del(`community:${comunidad._id}:members`);
 
     return {
       removed: true,
       message: 'Miembro eliminado correctamente por un administrador',
-    };
+    }
   }
 
   async removeCommunity(comunidadId: string) {
