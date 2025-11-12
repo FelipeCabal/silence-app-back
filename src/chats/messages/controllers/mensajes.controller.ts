@@ -15,12 +15,14 @@ import {
   ApiTags,
   ApiBody,
   ApiParam,
+
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CreateMessageDto } from 'src/chats/dto/mensajesDto/create-mensaje.dto';
 
 @Controller('mensajes')
 @ApiTags('mensajes')
+
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class MensajesController {

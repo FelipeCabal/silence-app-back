@@ -2,6 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
+
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,6 +16,7 @@ import { GrupoResponseDto } from '../response/group.response';
 import { User } from 'src/users/entities/user.model';
 import { UsersService } from 'src/users/services/users.service';
 import { Role } from 'src/config/enums/roles.enum';
+
 import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
@@ -22,8 +26,9 @@ export class GroupService {
     @InjectModel(InvitacionesGrupos.name)
     private readonly invitacionesModel: Model<InvitacionesGrupos>,
     private readonly userService: UsersService,
-    private readonly redisService: RedisService, // Inject RedisService
-  ) { }
+        private readonly redisService: RedisService, 
+
+  ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
     const users = await this.gruposModel.db
@@ -54,10 +59,19 @@ export class GroupService {
 
 
 
-  async findAll() {
-    const grupos = await this.gruposModel.find().lean();
-    return grupos.map((g) => GrupoResponseDto.fromModel(g));
+async findAll(userId: string) {
+  const userObjectId = new Types.ObjectId(userId);
+
+  const grupos = await this.gruposModel
+    .find({ 'miembros.user._id': userObjectId })
+    .lean();
+
+  if (!grupos.length) {
+    return [];
   }
+  return grupos.map((g) => GrupoResponseDto.fromModel(g));
+}
+
 
   async findById(id: string) {
     const grupo = await this.gruposModel.findById(id).lean();
@@ -67,19 +81,28 @@ export class GroupService {
     return GrupoResponseDto.fromModel(grupo);
   }
 
-  async remove(id: string) {
-    const deleted = await this.gruposModel.findByIdAndDelete(id);
+  async remove(id: string, userId: string) {
+  const groupObjectId = new Types.ObjectId(id);
+  const userObjectId = new Types.ObjectId(userId);
 
-    if (!deleted) throw new NotFoundException('Grupo no encontrado.');
+  const grupo = await this.gruposModel.findById(groupObjectId).lean();
 
-    await this.invitacionesModel.deleteMany({ grupo: id });
+  if (!grupo) throw new NotFoundException('Grupo no encontrado.');
 
-    await this.redisService.client.del(`group:${id}`);
+  const admin = grupo.members.find(m => m.rol === 'admin');
+  if (!admin) throw new ForbiddenException('Este grupo no tiene administrador asignado.');
 
-    return { deleted: true };
+  if (admin.user._id.toString() !== userObjectId.toString()) {
+    throw new ForbiddenException('No tienes permiso para eliminar este grupo.');
   }
 
-  async addUserToGroup(groupId: string, userId: string) {
+  await this.gruposModel.findByIdAndDelete(groupObjectId);
+  await this.invitacionesModel.deleteMany({ grupo: groupObjectId });
+
+  return { deleted: true };
+}
+
+   async addUserToGroup(groupId: string, userId: string) {
     const grupoObjectId = new Types.ObjectId(groupId);
     const userObjectId = new Types.ObjectId(userId);
 
@@ -107,14 +130,123 @@ export class GroupService {
         nombre: user.nombre,
         avatar: user.imagen ?? null,
       },
-      rol: Role.Member,
+
+      rol: Role.Member, 
+
     };
 
     grupo.members.push(newMember);
     await grupo.save();
+    return GrupoResponseDto.fromModel(grupo);
 
+  }
+
+
+  async leaveGroup(groupId: string, userId: string) {
+  const groupObjectId = new Types.ObjectId(groupId);
+  const userObjectId = new Types.ObjectId(userId);
+
+  const grupo = await this.gruposModel.findById(groupObjectId);
+
+  if (!grupo) {
+    throw new NotFoundException('Grupo no encontrado');
+  }
+
+  const miembro = grupo.members.find(
+    (m) => m.user._id.toString() === userObjectId.toString(),
+  );
+
+  if (!miembro) {
+    throw new NotFoundException('No perteneces a este grupo');
+  }
+
+  if (miembro.rol === Role.Admin) {
+    const admins = grupo.members.filter((m) => m.rol === Role.Admin);
+
+    if (admins.length === 1) {
+      const otroMiembro = grupo.members.find(
+        (m) => m.user._id.toString() !== userObjectId.toString(),
+      );
+
+      if (otroMiembro) {
+        otroMiembro.rol = Role.Admin;
+        await grupo.save(); 
+      } else {
+        throw new BadRequestException(
+          'No puedes salir, no hay más miembros para asignar como admin',
+        );
+      }
+    }
+  }
+
+  grupo.members = grupo.members.filter(
+    (m) => m.user._id.toString() !== userObjectId.toString(),
+  );
+
+  await grupo.save();
     await this.redisService.client.del(`group:${groupId}:members`);
 
-    return GrupoResponseDto.fromModel(grupo);
-  }
+
+  return {
+    left: true,
+    message: 'Has salido del grupo correctamente',
+  };
 }
+
+
+
+
+async removeMember(groupId: string, memberId: string, requesterId: string) {
+  const groupObjectId = new Types.ObjectId(groupId);
+  const memberObjectId = new Types.ObjectId(memberId);
+  const requesterObjectId = new Types.ObjectId(requesterId);
+
+  const grupo = await this.gruposModel.findById(groupObjectId);
+  if (!grupo) {
+    throw new NotFoundException('Grupo no encontrado');
+  }
+
+  const requester = grupo.members.find(
+    (m) => m.user._id.toString() === requesterObjectId.toString(),
+  );
+  if (!requester) {
+    throw new ForbiddenException('No perteneces a este grupo');
+  }
+
+  if (requester.rol !== Role.Admin) {
+    throw new ForbiddenException('Solo los administradores pueden eliminar miembros');
+  }
+
+  if (requesterId === memberId) {
+    throw new BadRequestException('No puedes eliminarte a ti mismo');
+  }
+
+  const miembroAEliminar = grupo.members.find(
+    (m) => m.user._id.toString() === memberObjectId.toString(),
+  );
+
+  if (!miembroAEliminar) {
+    throw new NotFoundException('El usuario no es miembro de este grupo');
+  }
+
+  if (miembroAEliminar.rol === Role.Admin) {
+    throw new ForbiddenException('No puedes eliminarte siendo admin');
+  }
+
+  const result = await this.gruposModel.updateOne(
+    { _id: groupObjectId },
+    { $pull: { members: { 'user._id': memberObjectId } } },
+  );
+
+  if (result.modifiedCount === 0) {
+    throw new BadRequestException('No se pudo eliminar el miembro');
+  }
+    await this.redisService.client.del(`group:${groupId}:members`);
+
+
+  return {
+    removed: true,
+    message: `Miembro eliminado correctamente`,
+  };
+}
+  }

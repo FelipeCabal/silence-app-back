@@ -27,6 +27,7 @@ import { MensajesController } from './messages/controllers/mensajes.controller';
 import { MessagesService } from './messages/services/mensajes.service';
 import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
 import { GroupInvitationsService } from './messages/services/group-invitations.service2';
+
 import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
@@ -64,4 +65,4 @@ import { RedisModule } from 'src/redis/redis.module';
     MessagesService,
   ],
 })
-export class ChatsModule { }
+export class ChatsModule {}
