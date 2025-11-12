@@ -5,10 +5,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { FriendRequest } from "../entities/solicitud.schema";
 import { Model } from "mongoose";
 import { UserSchema } from "../entities/users.schema";
-<<<<<<< HEAD
-=======
 import { RedisService } from "../../redis/redis.service";
->>>>>>> 8b6e6c55cf90235b595a691e6d1681f8be32cc61
 import { ChatPrivateService } from "src/chats/chat-private/chat-private.service";
 
 @Injectable()
