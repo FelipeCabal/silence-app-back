@@ -8,6 +8,7 @@ import {
   Request,
   UseGuards,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,17 +23,16 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 
 @Controller('groups')
 @ApiTags('groups')
-
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class GroupsController {
-  constructor(private readonly groupService: GroupService) { }
+  constructor(private readonly groupService: GroupService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
   @ApiBody({ type: CreateGrupoDto })
   async create(@Body() dto: CreateGrupoDto, @Request() req: any) {
-    const creatorId = req.user.id;
+    const creatorId = req.user._id;
     const data = await this.groupService.create(dto, creatorId);
 
     return {
@@ -42,21 +42,20 @@ export class GroupsController {
     };
   }
 
- 
-@Get()
-@ApiOperation({ summary: 'Obtener los grupos a los que pertenece el usuario autenticado' })
-async findAll(@Req() req: any) {
-  const userId = req.user?.id; 
-  const data = await this.groupService.findAll(userId);
+  @Get()
+  @ApiOperation({
+    summary: 'Obtener los grupos a los que pertenece el usuario autenticado',
+  })
+  async findAll(@Req() req: any) {
+    const userId = req.user?._id;
+    const data = await this.groupService.findAll(userId);
 
-  return {
-    err: false,
-    msg: 'Grupos obtenidos correctamente',
-    data,
-  };
-}
-
-
+    return {
+      err: false,
+      msg: 'Grupos obtenidos correctamente',
+      data,
+    };
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener grupo por ID' })
@@ -74,7 +73,7 @@ async findAll(@Req() req: any) {
   @ApiOperation({ summary: 'Eliminar grupo' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
   async remove(@Param('id') id: string, @Req() req: any) {
-    const userId = req.user.sub;
+    const userId = req.user._id;
 
     const data = await this.groupService.remove(id, userId);
 
@@ -87,7 +86,8 @@ async findAll(@Req() req: any) {
 
   @Delete(':id/leave')
   @ApiOperation({
-    summary: 'Salir del grupo (si eres admin se reasigna el rol si hay más miembros)',
+    summary:
+      'Salir del grupo (si eres admin se reasigna el rol si hay más miembros)',
   })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
   async leaveGroup(@Param('id') id: string, @Req() req: any) {
@@ -106,7 +106,11 @@ async findAll(@Req() req: any) {
     summary: 'Eliminar miembro de un grupo (solo administradores)',
   })
   @ApiParam({ name: 'groupId', type: String, description: 'ID del grupo' })
-  @ApiParam({ name: 'memberId', type: String, description: 'ID del miembro a eliminar' })
+  @ApiParam({
+    name: 'memberId',
+    type: String,
+    description: 'ID del miembro a eliminar',
+  })
   async removeMember(
     @Param('groupId') groupId: string,
     @Param('memberId') memberId: string,
@@ -127,4 +131,27 @@ async findAll(@Req() req: any) {
     };
   }
 
+  @Post(':groupId/mensajes')
+  async addMessage(
+    @Param('groupId') groupId: string,
+    @Body('message') message: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user._id;
+
+    if (!message || message.trim() === '') {
+      throw new ForbiddenException('El mensaje no puede estar vacío.');
+    }
+
+    const nuevoMensaje = await this.groupService.addMessage(
+      groupId,
+      userId,
+      message,
+    );
+
+    return {
+      status: 'success',
+      data: nuevoMensaje,
+    };
+  }
 }

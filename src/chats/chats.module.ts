@@ -23,8 +23,6 @@ import { ChatPrivateService } from './chat-private/chat-private.service';
 import { FriendRequestSchema } from 'src/users/entities/solicitud.model';
 import { FriendRequest } from 'src/users/entities/solicitud.schema';
 import { UsersModule } from 'src/users/users.module';
-import { MensajesController } from './messages/controllers/mensajes.controller';
-import { MessagesService } from './messages/services/mensajes.service';
 import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
 import { GroupInvitationsService } from './messages/services/group-invitations.service2';
 
@@ -48,21 +46,18 @@ import { RedisModule } from 'src/redis/redis.module';
     ChatPrivateController,
     ComunidadesController,
     GroupsController,
-    MensajesController,
     InvitationsGroupController,
   ],
   providers: [
     ChatPrivateService,
     GroupService,
     CommunityService,
-    MessagesService,
     GroupInvitationsService,
   ],
   exports: [
     ChatPrivateService,
     GroupService,
     CommunityService,
-    MessagesService,
   ],
 })
 export class ChatsModule {}

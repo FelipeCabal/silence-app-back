@@ -249,4 +249,38 @@ async removeMember(groupId: string, memberId: string, requesterId: string) {
     message: `Miembro eliminado correctamente`,
   };
 }
+
+
+async addMessage(groupId: string, userId: string, message: string) {
+    const grupo = await this.gruposModel.findById(groupId);
+    if (!grupo) throw new NotFoundException('Grupo no encontrado.');
+
+    const isMember = grupo.members.some(
+      (m) => m.user._id.toString() === userId,
+    );
+    if (!isMember) throw new ForbiddenException('No perteneces a este grupo.');
+
+    if (!Array.isArray(grupo.mensajes)) {
+      grupo.mensajes = [];
+    }
+
+    grupo.mensajes.push({
+      remitente: new Types.ObjectId(userId),
+      mensaje: message,
+      fecha: new Date(),
+    });
+
+    grupo.lastMessage = message;
+    grupo.lastMessageDate = new Date();
+    await grupo.save();
+
+    await this.redisService.client.del(`group:${groupId}:messages`);
+
+    return {
+      _id: grupo._id,
+      mensaje: message,
+      remitente: userId,
+      fecha: new Date(),
+    };
+  }
   }

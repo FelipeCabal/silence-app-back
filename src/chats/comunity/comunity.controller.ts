@@ -20,6 +20,7 @@ import {
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { CreateComunidadDto } from '../request/community.dto';
 import { CommunityService } from './community.service';
+import { CreateCommunityMessageDto } from '../dto/comunidadesDto/create-community-message.dto';
 
 @Controller('community')
 @ApiTags('community')
@@ -33,7 +34,7 @@ export class ComunidadesController {
 @Get()
 @ApiOperation({ summary: 'Obtener comunidades a las que pertenece el usuario autenticado' })
 async findAll(@Req() req: any) {
-  const userId = req.user.id; 
+  const userId = req.user._id; 
 
   const data = await this.communityService.findAll(userId);
 
@@ -61,7 +62,7 @@ async findAll(@Req() req: any) {
   @ApiOperation({ summary: 'Crear comunidad' })
   @ApiBody({ type: CreateComunidadDto })
   async createCommunity(@Body() dto: CreateComunidadDto, @Request() req: any) {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const data = await this.communityService.create(dto, userId);
     return {
       err: false,
@@ -74,7 +75,7 @@ async findAll(@Req() req: any) {
   @ApiOperation({ summary: 'Unirse a una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async addMember(@Param('id') communityId: string, @Request() req: any) {
-    const userId = req.user.id;
+    const userId = req.user._id;
     await this.communityService.addMiembro(communityId, userId);
     return {
       err: false,
@@ -96,7 +97,7 @@ async findAll(@Req() req: any) {
     @Param('userId') userId: string,
     @Req() req: any,
   ) {
-    const requesterId = req.user?.id;
+    const requesterId = req.user?._id;
     await this.communityService.remove(communityId, userId, requesterId);
     return {
       err: false,
@@ -120,7 +121,7 @@ async findAll(@Req() req: any) {
   @ApiOperation({ summary: 'Salir de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async leaveCommunity(@Param('id') communityId: string, @Req() req: any) {
-    const userId = req.user?.id;
+    const userId = req.user?._id;
 
     const result = await this.communityService.leaveCommunity(
       communityId,
@@ -133,5 +134,26 @@ async findAll(@Req() req: any) {
       data: null,
     };
   }
+
+
+
+  @Post(':id/messages')
+@ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
+@ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
+@ApiBody({ type: CreateCommunityMessageDto })
+async addMessageToCommunity(
+  @Param('id') id: string,
+  @Body() dto: CreateCommunityMessageDto,
+  @Req() req: any,
+) {
+  const userId = req.user._id;
+  const data = await this.communityService.addMessage(id, userId, dto.message);
+  return {
+    err: false,
+    msg: 'Mensaje agregado correctamente a la comunidad',
+    data,
+  };
+}
+
 
 }

@@ -233,4 +233,51 @@ export class CommunityService {
   };
 }
 
+
+
+async addMessage(
+  comunidadId: string,
+  userId: string,
+  message: string,
+) {
+  const comunidad = await this.comunidadesModel.findById(comunidadId);
+
+  if (!comunidad) {
+    throw new NotFoundException('Comunidad no encontrada');
+  }
+
+  const isMember = comunidad.miembros.some(
+    (m) => m.user._id.toString() === userId,
+  );
+
+  if (!isMember) {
+    throw new ForbiddenException('No puedes enviar mensajes en esta comunidad');
+  }
+
+  if (!Array.isArray(comunidad.mensajes)) {
+    comunidad.mensajes = [];
+  }
+
+  comunidad.mensajes.push({
+    remitente: new Types.ObjectId(userId),
+    mensaje: message,
+    fecha: new Date(),
+  });
+
+  comunidad.lastMessage = message;
+  comunidad.lastMessageDate= new Date();
+
+  await comunidad.save();
+
+  await this.redisService.client.del(`community:${comunidadId}:messages`);
+
+  return {
+    _id: comunidad._id,
+    mensaje: message,
+    remitente: userId,
+    fecha: new Date(),
+  };
+}
+
+
 }
