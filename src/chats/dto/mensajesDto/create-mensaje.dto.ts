@@ -4,7 +4,7 @@ export class CreateMessageDto {
 
     @IsString()
     @IsNotEmpty()
-    message: string;    // El contenido del mensaje
+    message: string;    
 
     @IsNumber()
     @IsNotEmpty()
@@ -13,8 +13,4 @@ export class CreateMessageDto {
     @IsString()
     @IsNotEmpty()
     chatType: string;   // Tipo de chat: 'private', 'group', 'community'
-
-    @IsNumber()
-    @IsNotEmpty()
-    usuarioId: number; // Asegúrate de que esta propiedad esté aquí
 }

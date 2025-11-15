@@ -1,156 +1,271 @@
-import { forwardRef, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { forwardRef, HttpException, HttpStatus, Inject, Injectable, } from '@nestjs/common';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../entities/user.entity';
-import { Brackets, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { SALT_ROUNDS } from 'src/config/constants/bycript.constants';
-import { SolicitudAmistad } from '../entities/solicitud.entity';
 import { SolicitudesAmistadService } from './solicitudesAmistad.service';
 import { UserQueries } from '../dto/querie.dto';
+import { UserSchema } from '../entities/users.schema';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { RedisService } from '../../redis/redis.service';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-
+    @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
     @Inject(forwardRef(() => SolicitudesAmistadService))
     private readonly solicitudAmistadServices: SolicitudesAmistadService,
+    private readonly redisService: RedisService,
   ) { }
 
-  async createUser(createUser: CreateUserDto) {
-    createUser.password = bcrypt.hashSync(createUser.password, SALT_ROUNDS)
-    const exists = await this.userRepository.findOne({
-      where: { email: createUser.email }
-    });
-    if (exists) {
-      throw new HttpException('user already exist', HttpStatus.CONFLICT)
-    };
-    const user = await this.userRepository.save(createUser);
+  private readonly TTL_USER_SECONDS = 600;
+  private readonly TTL_COLLECTION_SECONDS = 600;
 
-    return user;
+  private buildSearchKey(userId: string, q: UserQueries): string {
+    const parts = [
+      'users:search',
+      userId,
+      q.search || '',
+      q.country || '',
+      (q.limit || 0).toString(),
+    ];
+    return parts.join(':');
   }
 
-  async findAllUsers(userId: number, userQueries: UserQueries): Promise<User[]> {
+  private async cacheSet(key: string, value: any, ttl: number) {
+    try {
+      await this.redisService.client.set(key, JSON.stringify(value), 'EX', ttl);
+    } catch (err) {
 
-    const userFriends = await this.findAllFriends(userId);
-    const friendIds = userFriends.map((friend) => friend.user.id);
+    }
+  }
 
-    let usersQuery = this.userRepository.createQueryBuilder('user');
+  /** Get & parse JSON cache */
+  private async cacheGet<T = any>(key: string): Promise<T | null> {
+    try {
+      const raw = await this.redisService.client.get(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
 
-    if (friendIds.length > 0) {
-      usersQuery = usersQuery
-        .orderBy(
-          `CASE WHEN user.id IN (:...friendIds) THEN 1 ELSE 2 END`,
-          'ASC'
-        )
-        .setParameter('friendIds', friendIds);
-    } else {
-      usersQuery = usersQuery.orderBy('user.id', 'ASC');
+  private async invalidate(keys: string[]) {
+    try {
+      if (keys.length) {
+        await this.redisService.client.del(...keys);
+      }
+    } catch { }
+  }
+
+  /**
+   * Función para crear un usuario
+   * @param createUser 
+   * @returns 
+   */
+  async createUser(createUser: CreateUserDto) {
+    const exists = await this.userModel.findOne({ email: createUser.email });
+    if (exists) {
+      throw new HttpException('User already exists', HttpStatus.CONFLICT);
     }
 
-    usersQuery = usersQuery.addOrderBy('user.nombre', 'ASC');
+    createUser.password = bcrypt.hashSync(createUser.password, SALT_ROUNDS);
+    const user = new this.userModel(createUser);
+    const saved = await user.save();
+    const safe = { ...saved.toObject(), password: undefined };
+
+    this.cacheSet(`user:${saved._id}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`user:email:${saved.email}`, { ...saved.toObject() }, this.TTL_USER_SECONDS);
+    return saved;
+  }
+
+  /**
+   * Función para buscar a todos los usuarios usando queries / filtros
+   * @param userId 
+   * @param userQueries 
+   * @returns lista de usuarios que cumplen con los criterios de búsqueda
+   */
+  async findAllUsers(userId: string, userQueries: UserQueries): Promise<any[]> {
+    const cacheKey = this.buildSearchKey(userId, userQueries);
+    const cached = await this.cacheGet<any[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    let query: any = { _id: { $ne: userId } };
 
     if (userQueries.search) {
-      usersQuery = usersQuery.andWhere(
-        'user.nombre ILIKE :search OR user.email ILIKE :search',
-        { search: `%${userQueries.search}%` }
+      query.$or = [
+        { nombre: { $regex: userQueries.search, $options: 'i' } },
+        { email: { $regex: userQueries.search, $options: 'i' } },
+      ];
+    }
+    if (userQueries.country) {
+      query.pais = { $regex: userQueries.country, $options: 'i' };
+    }
+
+    const users = await this.userModel
+      .find(query)
+      .limit(userQueries.limit || 0)
+      .sort({ nombre: 1 })
+      .lean()
+      .exec();
+
+    if (!users || users.length === 0) {
+      throw new HttpException(
+        'No se encontraron usuarios que coincidan con la búsqueda.', HttpStatus.NOT_FOUND
       );
     }
 
-    if (userQueries.country) {
-      usersQuery = usersQuery.andWhere('user.pais ILIKE :country', { country: userQueries.country });
-    }
-
-    if (userQueries.limit) {
-      usersQuery = usersQuery.take(userQueries.limit);
-    }
-
-    const users = await usersQuery.getMany();
-
-    if (users.length === 0) {
-      throw new NotFoundException('No se encontraron usuarios que coincidan con la búsqueda.');
-    }
-
-    return users;
-  }
-
-
-  async findAllFriends(userId: number): Promise<{ solicitudId: SolicitudAmistad; user: User }[]> {
-    const friendsList = await this.userRepository
-      .createQueryBuilder('user')
-      .innerJoinAndSelect(
-        'solicitudAmistad',
-        'solicitud',
-        '(solicitud.userEnvia = user.id OR solicitud.userRecibe = user.id) AND solicitud.status = :status',
-        { status: 'A' }
-      )
-      .where('user.id != :userId', { userId })
-      .andWhere(
-        new Brackets((qb) => {
-          qb.where('solicitud.userEnvia = :userId', { userId })
-            .orWhere('solicitud.userRecibe = :userId', { userId });
-        })
-      )
-      .getMany()
-
-    if (friendsList.length === 0) {
-      return []
-    }
-
-    return await Promise.all(friendsList.map(async (friend) => {
-      const solicitud = await this.solicitudAmistadServices.findOneRequestByIds(userId, friend.id);
-
-      return {
-        solicitudId: solicitud,
-        user: friend
-      };
+    const result = users.map(user => ({
+      id: user._id.toString(),
+      nombre: user.nombre,
+      descripcion: user.descripcion,
+      imagen: user.imagen,
+      email: user.email,
+      fechaNto: user.fechaNto,
+      sexo: user.sexo,
+      pais: user.pais
     }));
+
+    this.cacheSet(cacheKey, result, this.TTL_COLLECTION_SECONDS);
+    return result;
   }
 
+  async findAllFriends(userId: string) {
+    const cacheKey = `users:friends:${userId}`;
+    const cached = await this.cacheGet<any[]>(cacheKey);
+    if (cached) return cached;
 
-  async findOneUser(id: number): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { id: id },
-      relations: ['grupos', 'comunidades'],
+    const acceptedRequests = await this.solicitudAmistadServices.findAcceptedFriendships(userId);
+    if (!acceptedRequests.length) {
+      this.cacheSet(cacheKey, [], this.TTL_COLLECTION_SECONDS);
+      return [];
+    }
+    const amigos = acceptedRequests.map(request => {
+      const isSender = request.userEnvia._id.toString() === userId;
+      const amigo: any = isSender ? request.userRecibe : request.userEnvia;
+      const safe: any = { ...amigo };
+      if ('password' in safe) delete safe.password;
+      safe._id = safe._id?.toString?.() || safe._id;
+      return safe;
     });
-
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND)
-    }
-    return user
+    this.cacheSet(cacheKey, amigos, this.TTL_COLLECTION_SECONDS);
+    return amigos;
   }
 
-  async update(id: number, updateUser: UpdateUserDto) {
-    if (updateUser.password) {
-      updateUser.password = await bcrypt.hashSync(updateUser.password, SALT_ROUNDS)
-    }
+  /**
+   * Función para buscar sólo un usuario 
+   * @param id 
+   * @returns Usuario
+   */
+  async findOneUser(id: string) {
+    const cacheKey = `user:${id}`;
+    const cached = await this.cacheGet<any>(cacheKey);
+    if (cached) return cached;
 
-    const newData = await this.userRepository.update(id, updateUser)
-
-    if (newData.affected === 0) {
-      throw new HttpException("User haven't been update", HttpStatus.CONFLICT)
-    }
-    return newData
-  }
-
-  async remove(id: number) {
-    const userDelete = await this.userRepository.delete(id)
-
-    if (!userDelete) {
-      throw new HttpException("User can't be delete", HttpStatus.CONFLICT)
-    }
-  }
-
-  async findByEmail(email: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-
+    const user = await this.userModel.findById(id).select('-password').lean().exec();
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-
-    return user;
+    const safe = { ...user, _id: user._id.toString() };
+    this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
+    return safe;
   }
+
+  /**
+   * Función para actualizar un usuario
+   * @param id 
+   * @param updateUser 
+   * @returns usuario actualizado.
+   */
+  async update(id: string, updateUser: UpdateUserDto) {
+    if (updateUser.password) {
+      updateUser.password = bcrypt.hashSync(updateUser.password, SALT_ROUNDS);
+    }
+
+    // Obtener email previo para invalidar cache por email si cambia
+    const previous = await this.userModel.findById(id).select('email').lean();
+    if (!previous) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    const updated = await this.userModel.findByIdAndUpdate(id, updateUser, { new: true }).lean();
+    if (!updated) {
+      throw new HttpException("User hasn't been updated", HttpStatus.CONFLICT);
+    }
+
+    const safe = { ...updated, _id: updated._id.toString() };
+
+    await this.invalidate([
+      `user:${id}`,
+      `profile:${id}`,
+      `user:email:${previous.email}`,
+      `user:email:${updated.email}`,
+      `users:friends:${id}`,
+    ]);
+
+    this.cacheSet(`user:${id}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`user:email:${updated.email}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`profile:${id}`, safe, this.TTL_USER_SECONDS);
+
+    return safe;
+  }
+
+  /**
+   * Función para eliminar un usuario
+   * @param id 
+   * @returns usuario eliminado
+   */
+  async remove(id: string) {
+    const userDelete = await this.userModel.findByIdAndDelete(id).lean();
+    if (!userDelete) {
+      throw new HttpException("User can't be delete", HttpStatus.CONFLICT);
+    }
+    await this.invalidate([
+      `user:${id}`,
+      `profile:${id}`,
+      `user:email:${userDelete.email}`,
+      `users:friends:${id}`,
+    ]);
+  }
+
+  /**
+   * Encuentra un usuario por su Email
+   * @param email 
+   * @returns user
+   */
+  async findByEmail(email: string) {
+    const cacheKey = `user:email:${email}`;
+    const cached = await this.cacheGet<any>(cacheKey);
+    if (cached) return cached;
+
+    // use .lean() to return a plain object (avoids needing to call toObject())
+    const user = await this.userModel.findOne({ email }).lean().exec();
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    const u: any = user;
+    const safe = { ...u, password: u.password };
+    this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
+
+    this.cacheSet(`user:${u._id}`, { ...safe, password: undefined }, this.TTL_USER_SECONDS);
+    return safe;
+  }
+
+  /**
+ * Verifica si un usuario existe sin cargar el documento completo
+ * @param id - ID del usuario
+ * @returns true si existe, false si no
+ */
+  async userExists(id: string): Promise<boolean> {
+    try {
+      const count = await this.userModel.countDocuments({ _id: id }).exec();
+      return count > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
 }

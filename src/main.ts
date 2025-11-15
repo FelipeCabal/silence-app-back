@@ -26,13 +26,14 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
+  //app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
 
   const config = new DocumentBuilder()
-    .setTitle('Gossip-Web')
-    .setDescription('The Gossip-Web API description')
+    .setTitle('Silence App API')
+    .setDescription('The Silence App API description')
     .setVersion('1.0')
-    .addTag('Gossip-Web')
+    .addBearerAuth()
+    .addTag('Silence App API')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

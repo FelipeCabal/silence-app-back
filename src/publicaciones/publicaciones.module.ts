@@ -1,27 +1,35 @@
 import { Module } from '@nestjs/common';
-import { PublicacionesService } from './publicaciones.service';
-import { PublicacionesController } from './publicaciones.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Publicaciones } from './entities/publicaciones.entity';
+import { PublicacionesController } from './controllers/publicaciones.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { comentarioModelSchema, comentariosSchema } from './comentarios/entities/comentarios.schema';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/services/users.service';
-
+import { Publicacion, PublicacionSchema } from './entities/publicacion.schema';
+import { PublicacionesService } from './services/publicaciones.service';
+import { ComentariosController } from './controllers/comentarios.controller';
+import { ComentariosService } from './services/comentarios.service';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Publicaciones]),
     MongooseModule.forFeature([
       {
-        name: comentariosSchema.name,
-        schema: comentarioModelSchema
-      }
+        name: Publicacion.name,
+        schema: PublicacionSchema,
+      },
     ]),
     UsersModule,
+    RedisModule
   ],
-  controllers: [PublicacionesController],
-  providers: [PublicacionesService, UsersService],
-  exports: [TypeOrmModule, MongooseModule, UsersModule, PublicacionesService]
+  controllers: [ComentariosController, PublicacionesController],
+  providers: [
+    ComentariosService,
+    PublicacionesService,
+    UsersService,
+  ],
+  exports: [
+    MongooseModule,
+    UsersModule,
+    PublicacionesService,
+  ]
 })
 export class PublicacionesModule { }

@@ -30,6 +30,7 @@ export class AuthGuard implements CanActivate {
         }
 
         const request = context.switchToHttp().getRequest();
+        console.log(request.headers.authorization)
         if (request.headers.authorization === undefined) {
             throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }

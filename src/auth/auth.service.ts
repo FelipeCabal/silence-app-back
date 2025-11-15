@@ -4,12 +4,14 @@ import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/services/users.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly UsersService: UsersService,
-        private readonly JwtServices: JwtService
+        private readonly JwtServices: JwtService,
+        private readonly redisService: RedisService,
     ) { }
 
     async login({ email, password }: LoginDto) {
@@ -23,7 +25,7 @@ export class AuthService {
             email: user.email,
             name: user.nombre
         };
-        
+
         return {
             access_token: await this.JwtServices.signAsync(payload),
         };
@@ -43,8 +45,30 @@ export class AuthService {
         return this.login(login)
     }
 
-    async profile(id: number) {
-        const user = await this.UsersService.findOneUser(id)
-        return user
+    async profile(id: string) {
+        const cacheKey = `profile:${id}`;
+        const TTL_SECONDS = 600;
+
+        const cached = await this.redisService.client.get(cacheKey);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
+        const user = await this.UsersService.findOneUser(id);
+
+        const safeUser: any = user ? { ...user } : user;
+        if (safeUser && 'password' in safeUser) {
+            delete safeUser.password;
+        }
+
+        if (safeUser) {
+            try {
+                await this.redisService.client.set(cacheKey, JSON.stringify(safeUser), 'EX', TTL_SECONDS);
+            } catch (err) {
+                console.warn('Redis set failed for key', cacheKey, err?.message || err);
+            }
+        }
+
+        return safeUser;
     }
 }

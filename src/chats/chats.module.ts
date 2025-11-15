@@ -1,38 +1,69 @@
+// src/chats/chats.module.ts
 import { forwardRef, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ChatPrivado, Comunidades, Grupos } from './entities/chats.entity';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Mensajes, MensajesSchema } from './entities/mensajes.schema';
-import { InvitacionesGrupos } from './entities/invitaciones.entity';
-import { PrivateChatsService } from './services/private-chats.service';
-import { UsersModule } from 'src/users/users.module';
-import { PrivateChatsController } from './controllers/private-chats.controller';
 import { RouterModule } from '@nestjs/core';
-import { GroupInvitationsService } from './services/group-invitations.service';
-import { GroupChatsService } from './services/gruop-chats.service';
-import { InvitationsGroupController } from './controllers/group-invitations.controller';
-import { GroupChatsController } from './controllers/group-chats.controller';
-import { ComunidadesService } from './services/comunity-chats.service';
-import { ComunidadesController } from './controllers/comunity-chats.controller';
-import { MiembrosComunidades } from './entities/miembrosComunidad.entity';
-import { MessagesService } from './services/mensajes.service';
-import { MensajesController } from './controllers/mensajes.controller';
-import { MessagesGateway } from './gateway/chats.gateway';
+import { Comunidades, ComunidadesSchema } from './schemas/community.schema';
+import { Grupos, GruposSchema } from './schemas/groups.schema';
+import {
+  InvitacionesGrupos,
+  InvitacionesGruposSchema,
+} from './schemas/invitations.schema';
+import { ChatPrivado, ChatPrivadoSchema } from './schemas/chats.schema';
+import { Mensajes, MensajesSchema } from './schemas/mensajes.schema';
+import { GroupService } from './groups/groups.service';
+import { CommunityService } from './comunity/community.service';
+import {
+  MiembrosComunidades,
+  MiembrosComunidadesSchema,
+} from './schemas/miembros-community.schema';
+import { ChatPrivateController } from './chat-private/chat-private.controller';
+import { ComunidadesController } from './comunity/comunity.controller';
+import { GroupsController } from './groups/groups.controller';
+import { ChatPrivateService } from './chat-private/chat-private.service';
+import { FriendRequestSchema } from 'src/users/entities/solicitud.model';
+import { FriendRequest } from 'src/users/entities/solicitud.schema';
+import { UsersModule } from 'src/users/users.module';
+import { MensajesController } from './messages/controllers/mensajes.controller';
+import { MessagesService } from './messages/services/mensajes.service';
+import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
+import { GroupInvitationsService } from './messages/services/group-invitations.service2';
+import { RedisModule } from 'src/redis/redis.module';
+import { UsersService } from 'src/users/services/users.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ChatPrivado, Grupos, Comunidades, InvitacionesGrupos, MiembrosComunidades]),
-    MongooseModule.forFeature([{ name: Mensajes.name, schema: MensajesSchema }]),
     forwardRef(() => UsersModule),
-    RouterModule.register([
-      {
-        path: 'chats',
-        module: ChatsModule
-      },
+    MongooseModule.forFeature([
+      { name: Comunidades.name, schema: ComunidadesSchema },
+      { name: Grupos.name, schema: GruposSchema },
+      { name: InvitacionesGrupos.name, schema: InvitacionesGruposSchema },
+      { name: ChatPrivado.name, schema: ChatPrivadoSchema },
+      { name: Mensajes.name, schema: MensajesSchema },
+      { name: MiembrosComunidades.name, schema: MiembrosComunidadesSchema },
+      { name: FriendRequest.name, schema: FriendRequestSchema },
     ]),
+    RedisModule,
   ],
-  controllers: [PrivateChatsController, InvitationsGroupController, GroupChatsController, ComunidadesController, MensajesController],
-  providers: [PrivateChatsService, GroupInvitationsService, GroupChatsService, ComunidadesService, MessagesService, MessagesGateway],
-  exports: [TypeOrmModule, MongooseModule, PrivateChatsService]
+  controllers: [
+    ChatPrivateController,
+    ComunidadesController,
+    GroupsController,
+    MensajesController,
+    InvitationsGroupController,
+  ],
+  providers: [
+    ChatPrivateService,
+    GroupService,
+    CommunityService,
+    MessagesService,
+    GroupInvitationsService,
+    UsersService,
+  ],
+  exports: [
+    ChatPrivateService,
+    GroupService,
+    CommunityService,
+    MessagesService,
+  ],
 })
 export class ChatsModule { }
