@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { ChatsModule } from './chats/chats.module';
 import { LikesModule } from './likes/likes.module';
 import { RedisModule } from './redis/redis.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { RedisModule } from './redis/redis.module';
     UsersModule,
     AuthModule,
     LikesModule,
-    ChatsModule
+    ChatsModule,
+    FirebaseModule
   ],
   controllers: [AppController],
   providers: [AppService],
