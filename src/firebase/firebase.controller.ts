@@ -15,8 +15,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseService } from './firebase.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller('firebase')
+@ApiTags('firebase')
 export class FirebaseController {
     constructor(private readonly firebaseService: FirebaseService) { }
 
