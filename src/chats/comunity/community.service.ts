@@ -6,21 +6,24 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Comunidades } from '../schemas/community.schema';
 import { Role } from 'src/config/enums/roles.enum';
 import { CreateComunidadDto } from '../request/community.dto';
 import { ComunidadResponseDto } from '../response/community.response';
 import { MiembrosComunidades } from '../schemas/miembros-community.schema';
 import { RedisService } from 'src/redis/redis.service';
+import { UserSchema } from 'src/users/entities/users.schema';
+import { User } from 'src/users/entities/user.model';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class CommunityService {
   constructor(
     @InjectModel(Comunidades.name)
     private readonly comunidadesModel: Model<Comunidades>,
-    @InjectModel(MiembrosComunidades.name)
-    private readonly miembrosModel: Model<MiembrosComunidades>,
+    @InjectModel(UserSchema.name)
+    private readonly userModel: Model<UserSchema>,
     private readonly redisService: RedisService,
   ) { }
 
@@ -53,22 +56,50 @@ export class CommunityService {
       miembros: [miembro],
     });
 
+await this.userModel.updateOne(
+  { _id: userId },
+  { 
+    $push: { 
+      comunidades: { 
+        _id: comunidad._id,
+        nombre: comunidad.nombre,
+        imagen: comunidad.imagen ?? null,
+      } 
+    } 
+  },
+);
+
+
     return ComunidadResponseDto.fromModel(comunidad);
   }
 
-  async findAll(userId: string) {
-    const userObjectId = new Types.ObjectId(userId);
+  async findAllByUser(userId: string) {
+  const user = await this.userModel.findById(userId).lean();
+  console.log(user,"como estaas");
 
-    const comunidades = await this.comunidadesModel
-      .find({ 'miembros.user._id': userObjectId })
-      .lean();
+  if (!user) {
+    throw new NotFoundException("Usuario no encontrado")
+  };
 
-    if (!comunidades || comunidades.length === 0) {
-      return [];
-    }
+  const communitySummaries = user.comunidades ?? [];
+  console.log(communitySummaries,"bro?")
 
-    return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
+  if (communitySummaries.length == 0) {
+    throw new NotFoundException({
+      err:true,
+      msg:"el usuario no pertenece a ninguna comunidad"
+    })
   }
+
+  const communityIds = communitySummaries.map(c => new Types.ObjectId(c._id));
+
+  const comunidades = await this.comunidadesModel
+    .find({ _id: { $in: communityIds } })
+    .lean();
+
+  return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
+}
+
 
   async findById(id: string) {
     const comunidad = await this.comunidadesModel.findById(id).lean();
@@ -118,7 +149,7 @@ export class CommunityService {
     return { message: 'Miembro agregado exitosamente.' };
   }
 
-  async remove(communityId: string, memberId: string, requesterId: string) {
+  async removeMember(communityId: string, memberId: string, requesterId: string) {
     const communityObjectId = new Types.ObjectId(communityId);
     const memberObjectId = new Types.ObjectId(memberId);
     const requesterObjectId = new Types.ObjectId(requesterId);
@@ -163,6 +194,12 @@ export class CommunityService {
       { _id: communityObjectId },
       { $set: { miembros: updatedMembers } },
     );
+
+    await this.userModel.updateOne(
+  { _id: memberObjectId },
+  { $pull: { comunidades: { _id: communityObjectId } } },
+);
+
     await this.redisService.client.del(`community:${comunidad._id}:members`);
 
     return {
@@ -180,6 +217,10 @@ export class CommunityService {
     }
 
     await this.comunidadesModel.findByIdAndDelete(comunidadObjectId);
+    await this.userModel.updateMany(
+  { "comunidades._id": comunidadObjectId },
+  { $pull: { comunidades: { _id: comunidadObjectId } } },
+);
 
     return { deleted: true, message: 'Comunidad eliminada exitosamente' };
   }
@@ -226,6 +267,12 @@ export class CommunityService {
   );
 
   await comunidad.save();
+
+  await this.userModel.updateOne(
+  { _id: userId },
+  { $pull: { comunidades: { _id: communityObjectId } } },
+);
+
 
   return {
     left: true,

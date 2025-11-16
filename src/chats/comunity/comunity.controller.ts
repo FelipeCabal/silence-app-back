@@ -36,7 +36,7 @@ export class ComunidadesController {
 async findAll(@Req() req: any) {
   const userId = req.user._id; 
 
-  const data = await this.communityService.findAll(userId);
+  const data = await this.communityService.findAllByUser(userId);
 
   return {
     err: false,
@@ -98,7 +98,7 @@ async findAll(@Req() req: any) {
     @Req() req: any,
   ) {
     const requesterId = req.user?._id;
-    await this.communityService.remove(communityId, userId, requesterId);
+    await this.communityService.removeMember(communityId, userId, requesterId);
     return {
       err: false,
       msg: 'Miembro eliminado correctamente por un administrador',
