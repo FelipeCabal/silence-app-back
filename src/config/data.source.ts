@@ -1,5 +1,4 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModuleOptions } from "@nestjs/typeorm";
 
 ConfigModule.forRoot();
 const configService = new ConfigService();
@@ -19,4 +18,5 @@ const configService = new ConfigService();
     logging: false,
 } */
 
-export const mongooseConfigUri: string = "mongodb+srv://felipecabal_db_user:mayo2004@cluster0.b2xtlkq.mongodb.net/";
+//export const mongooseConfigUri: string = "mongodb+srv://felipecabal_db_user:mayo2004@cluster0.b2xtlkq.mongodb.net/";
+export const mongooseConfigUri: string = process.env.MONGO_URL;

@@ -18,7 +18,6 @@ import { Role } from 'src/config/enums/roles.enum';
 
 import { RedisService } from 'src/redis/redis.service';
 import { UserSchema } from 'src/users/entities/users.schema';
-import { ObjectId } from 'typeorm';
 
 @Injectable()
 export class GroupService {
@@ -79,7 +78,7 @@ export class GroupService {
     })
     }
 
-    const groupIds = groupSummaries.map((g) => new ObjectId(g._id));
+    const groupIds = groupSummaries.map((g) => new Types.ObjectId(g._id));
 
     const grupos = await this.gruposModel
       .find({ _id: { $in: groupIds } })

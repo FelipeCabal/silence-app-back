@@ -1,6 +1,6 @@
-import { Exclude } from 'class-transformer';
+/* import { Exclude } from 'class-transformer';
 
-/* import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity"; */
+ import { InvitacionesGrupos } from "src/chats/entities/invitaciones.entity"; 
 
 import { Publicaciones } from 'src/publicaciones/entities/publicaciones.entity';
 import {
@@ -72,3 +72,4 @@ export class User {
   @ManyToMany(() => Grupos, (grupo) => grupo.members)
   grupos: Grupos[];
 }
+ */
