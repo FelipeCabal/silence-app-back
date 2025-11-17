@@ -8,12 +8,18 @@ import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dt
 import { Public } from 'src/auth/decorators/public.decorator';
 import { RedisService } from '../../redis/redis.service';
 import { PostQueries } from '../dto/requests/querie.dto';
+import { UserSchema } from 'src/users/entities/users.schema';
+import { User } from 'src/users/entities/user.model';
+import { PublicacionModel } from '../models/publciacion-summary.model';
 
 @Injectable()
 export class PublicacionesService {
     constructor(
         @InjectModel(Publicacion.name)
         private publicacionesModel: Model<Publicacion>,
+
+        @InjectModel(UserSchema.name)
+        private usersModel: Model<UserSchema>,
 
         private readonly redisService: RedisService,
     ) { }
@@ -54,9 +60,59 @@ export class PublicacionesService {
      * @returns The created post
      */
     async create(data: CreatePublicacionDto, userId: string): Promise<PublicacionResponseDto> {
-        const newPost = await this.publicacionesModel.create({ ...data, user: userId.toString() });
+        const summary = data;
+
+        const user = await this.usersModel.findById(userId, 'nombre imagen')
+
+        const userField = data.esAnonimo ? 'pubAnonimas' : 'publicaciones';
+
+        let createdPost = null;
+
+        try {
+            createdPost = await this.publicacionesModel.create({
+                ...data,
+                owner: { ...user, userId }
+            });
+
+            const updateInUser = await this.usersModel.findByIdAndUpdate(
+                userId,
+                {
+                    $push: {
+                        [userField]: {
+                            id: createdPost._id,
+                            summary
+                        }
+                    }
+                },
+                { new: true }
+            );
+
+            // Si el usuario no existe o no se pudo actualizar → limpiamos y error
+            if (!updateInUser) {
+                await this.publicacionesModel.findByIdAndDelete(createdPost._id);
+                throw new Error('User not found or failed to update user publications');
+            }
+
+        } catch (err) {
+            // Si algo falla después de crear el post, lo eliminamos para evitar basura
+            if (createdPost && createdPost._id) {
+                try {
+                    await this.publicacionesModel.findByIdAndDelete(createdPost._id);
+                } catch (cleanupError) {
+                    // puedes loguearlo si deseas
+                }
+            }
+
+            throw new HttpException(
+                'Error creating post',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        // 3) Invalidar cache
         await this.redisService.client.del('publicaciones:all');
-        return PublicacionResponseDto.fromModel(newPost);
+
+        return PublicacionResponseDto.fromModel(createdPost)
     }
 
     /**
@@ -64,18 +120,33 @@ export class PublicacionesService {
      * @returns An array of all posts
      */
     async findAll(): Promise<PublicacionResponseDto[]> {
+        try {
+            // Obtener posts públicos (con usuario)
+            const publicPosts = await this.publicacionesModel
+                .find({ esAnonimo: false })
+                .sort({ createdAt: -1 })
+                .lean();
 
-        const cacheKey = 'publicaciones:all';
-        const cached = await this.redisService.client.get(cacheKey);
-        if (cached) {
-            return JSON.parse(cached);
+            // Obtener posts anónimos (sin usuario)
+            const anonPosts = await this.publicacionesModel
+                .find({ esAnonimo: true })
+                .select('-owner') // Excluye el campo usuario
+                .sort({ createdAt: -1 })
+                .lean();
+
+            // Combinar y ordenar
+            const allPosts = [...publicPosts, ...anonPosts]
+                .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+            return allPosts.map(post => PublicacionResponseDto.fromModel(post));
+        } catch (err) {
+            throw new HttpException(
+                'Error fetching posts',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
-
-        const posts = await this.publicacionesModel.find().exec();
-
-        await this.redisService.client.set(cacheKey, JSON.stringify(posts), 'EX', 6000);
-        return posts.map((post) => PublicacionResponseDto.fromModel(post));
     }
+
 
     /**
      * Get a post by its ID
@@ -156,7 +227,7 @@ export class PublicacionesService {
             throw new HttpException('post not found', HttpStatus.NOT_FOUND);
         }
 
-        if (post.user.toString() !== userId) {
+        if (post.owner.toString() !== userId) {
             throw new HttpException("You aren't authorized for this action", HttpStatus.FORBIDDEN);
         }
 
@@ -185,7 +256,7 @@ export class PublicacionesService {
             throw new HttpException("post not found", HttpStatus.NOT_FOUND);
         }
 
-        if (post.user.toString() !== userId) {
+        if (post.owner.toString() !== userId) {
             throw new HttpException("You aren't authorized for this action", HttpStatus.FORBIDDEN);
         }
         const result = await this.publicacionesModel.findByIdAndDelete(id).exec();
