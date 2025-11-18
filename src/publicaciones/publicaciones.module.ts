@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { PublicacionesController } from './controllers/publicaciones.controller';
-//import { TypeOrmModule } from '@nestjs/typeorm';
-import { Publicaciones } from './entities/publicaciones.entity';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/services/users.service';
@@ -13,7 +11,6 @@ import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
-    //TypeOrmModule.forFeature([Publicaciones]),
     MongooseModule.forFeature([
       {
         name: Publicacion.name,
@@ -30,7 +27,6 @@ import { RedisModule } from 'src/redis/redis.module';
     UsersService,
   ],
   exports: [
-    //TypeOrmModule,
     MongooseModule,
     UsersModule,
     PublicacionesService,

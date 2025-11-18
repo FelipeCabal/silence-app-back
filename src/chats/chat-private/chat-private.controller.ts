@@ -8,12 +8,17 @@ import {
   UseGuards,
   Query,
   Request,
+  Req,
+  BadRequestException,
+  Patch,
 } from '@nestjs/common';
 import { ChatPrivateService } from './chat-private.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 import { ApiBody, ApiOperation, ApiTags, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
+import { CreateMessageDto } from '../dto/mensajesDto/create-mensaje.dto';
+import { ChatPrivadoResponseDto } from '../response/chat-private.response';
 
 @Controller('chat-privado')
 @ApiTags('private-chats')
@@ -27,6 +32,7 @@ export class ChatPrivateController {
   @ApiOperation({ summary: 'Crear chat privado entre dos usuarios' })
   @ApiBody({ type: CreateChatPrivadoDto })
   async create(@Body() dto: CreateChatPrivadoDto) {
+    console.log("entro")
     const data = await this.chatPrivateService.create(dto);
     return {
       err: false,
@@ -39,7 +45,7 @@ export class ChatPrivateController {
   @ApiOperation({ summary: 'Listar chats privados del usuario autenticado' })
   async findAllByUser( @Request() req: any) {
 
-    const userId = req.user.id;
+    const userId = req.user._id;
     const data = await this.chatPrivateService.findAllByUser(userId);
     return {
       err: false,
@@ -51,8 +57,9 @@ export class ChatPrivateController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener chat privado por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID del chat privado' })
-  async findById(@Param('id') id: string) {
-    const data = await this.chatPrivateService.findById(id);
+  async findById(@Param('id') id: string,@Req() req:any) {
+    const userId= req.user._id
+    const data = await this.chatPrivateService.findById(id,userId);
     return {
       err: false,
       msg: 'Chat privado obtenido correctamente',
@@ -71,4 +78,44 @@ export class ChatPrivateController {
       data,
     };
   }
+
+  @Post(':id/mensajes')
+@ApiOperation({ summary: 'Agregar un mensaje al chat privado' })
+@ApiParam({ name: 'id', type: String, description: 'ID del chat privado' })
+@ApiBody({ type: CreateMessageDto })
+async addMessage(
+  @Param('id') id: string,
+  @Body() dto: CreateMessageDto,
+  @Req() req: any,
+) {
+  const userId = req.user._id;
+  const data = await this.chatPrivateService.addMessage(id,userId,dto.message);
+  return {
+    err: false,
+    msg: 'Mensaje agregado correctamente',
+    data,
+  };
+}
+  @Patch(':id/last-message')
+  @ApiOperation({ summary: 'Actualizar el último mensaje de un chat privado (usuario autenticado)' })
+  async updateLastMessage(
+    @Param('id') chatId: string,
+    @Body('message') message: string,
+    @Request() req: any,
+  ): Promise<{ err: boolean; msg: string; data?: ChatPrivadoResponseDto }> {
+    const userId = req.user._id;
+
+    if (!message || message.trim() === '') {
+      throw new BadRequestException('El mensaje no puede estar vacío.');
+    }
+
+    const updatedChat = await this.chatPrivateService.updateLastMessage(chatId, userId, message);
+
+    return {
+      err: false,
+      msg: 'Último mensaje actualizado correctamente.',
+      data: updatedChat,
+    };
+  }
+
 }
