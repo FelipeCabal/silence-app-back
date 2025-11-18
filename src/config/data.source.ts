@@ -2,7 +2,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 ConfigModule.forRoot();
 const configService = new ConfigService();
-
+//comente para evitar eerror con la database
 /* export const typeOrmConfig: TypeOrmModuleOptions = {
     type: 'postgres',
     url: configService.get('DATABASE_URL', null),
