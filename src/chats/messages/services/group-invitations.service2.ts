@@ -13,6 +13,7 @@ import { UsersService } from 'src/users/services/users.service';
 import { Status } from 'src/config/enums/status.enum';
 import { InvitacionSimpleModel } from 'src/chats/models/InvitacionSimpleModel';
 import { GroupService } from 'src/chats/groups/groups.service';
+
 import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class GroupInvitationsService {
     private readonly groupInvitationModel: Model<InvitacionesGrupos>,
     private readonly usersService: UsersService,
     private readonly groupService: GroupService,
+
     private readonly redisService: RedisService,
   ) { }
 
@@ -37,7 +39,7 @@ export class GroupInvitationsService {
 
     const sender = await this.usersService.findOneUser(senderId);
     const receiver = await this.usersService.findOneUser(receiverId);
-    const group = await this.groupService.findById(groupId);
+    const group = await this.groupService.findById(groupId,senderId);
 
     if (group.members.some((m) => m.user._id.toString() === receiverId)) {
       throw new HttpException(

@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+/* import { HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { ChatPrivateService } from "src/chats/chat-private/chat-private.service";
@@ -47,8 +47,8 @@ export class MessagesService {
     }));
   }
 
-  async clearChat(chatId: string, userId: string, chatType: string) {
-    if (chatType === 'private') {
+ // async clearChat(chatId: string, userId: string, chatType: string) {
+    /* if (chatType === 'private') {
       const chat = await this.privateChatsService.findById(chatId);
 
       const allowed =
@@ -84,5 +84,5 @@ export class MessagesService {
 
     const deleted = await this.mensajeModel.deleteMany({ chatId });
     return { deleted: deleted.deletedCount };
-  }
-}
+  } */
+ 
