@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Publicacion } from '../entities/publicacion.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
 import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
@@ -11,6 +11,7 @@ import { PostQueries } from '../dto/requests/querie.dto';
 import { UserSchema } from 'src/users/entities/users.schema';
 import { User } from 'src/users/entities/user.model';
 import { PublicacionModel } from '../models/publciacion-summary.model';
+import { throwError } from 'rxjs';
 
 @Injectable()
 export class PublicacionesService {
@@ -227,20 +228,61 @@ export class PublicacionesService {
             throw new HttpException('post not found', HttpStatus.NOT_FOUND);
         }
 
-        if (post.owner.toString() !== userId) {
+        if (post.owner._id.toString() !== userId) {
             throw new HttpException("You aren't authorized for this action", HttpStatus.FORBIDDEN);
         }
 
-        const updatedPost = await this.publicacionesModel
-            .findByIdAndUpdate(postId, data, { new: true })
-            .exec();
+        try {
+            const updatedPost = await this.publicacionesModel
+                .findByIdAndUpdate(postId, data, { new: true })
+                .exec();
 
-        await this.redisService.client.del(`publicacion:${postId}`);
-        await this.redisService.client.del('publicaciones:all');
-        /*if (post) {
-          await this.redisService.client.del(`publicaciones:user:${post.userId}`);
-        }*/
-        return updatedPost ? PublicacionResponseDto.fromModel(updatedPost) : null;
+            if (!updatedPost) {
+                throw new HttpException('Error updating post', HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            const postObjectId = new Types.ObjectId(postId)
+
+
+            if (updatedPost.esAnonimo) {
+                await this.usersModel.updateOne(
+                    { "pubAnonimas.id": postObjectId },
+                    {
+                        $set: {
+                            'pubAnonimas.$.summary': {
+                                esAnonimo: updatedPost.esAnonimo,
+                                description: updatedPost.description,
+                                imagen: updatedPost.imagen
+                            }
+                        }
+                    },
+                );
+            } else {
+
+                await this.usersModel.updateOne(
+                    { "publicaciones.id": postObjectId },
+                    {
+                        $set: {
+                            'publicaciones.$.summary': {
+                                esAnonimo: updatedPost.esAnonimo,
+                                description: updatedPost.description,
+                                imagen: updatedPost.imagen
+                            }
+                        }
+                    }
+                )
+            }
+            await this.redisService.client.del(`publicacion:${postId}`);
+            await this.redisService.client.del('publicaciones:all');
+            /*if (post) {
+              await this.redisService.client.del(`publicaciones:user:${post.userId}`);
+            }*/
+            return updatedPost ? PublicacionResponseDto.fromModel(updatedPost) : null;
+
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'error processing request', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
