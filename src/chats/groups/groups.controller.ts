@@ -133,6 +133,25 @@ export class GroupsController {
   }
 
   @Post(':groupId/messages')
+  @ApiOperation({ summary: 'Agregar un mensaje a un grupo' })
+@ApiParam({
+  name: 'groupId',
+  type: String,
+  description: 'ID del grupo al que se enviará el mensaje',
+})
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        example: 'Hola a todos!',
+        description: 'Contenido del mensaje a enviar',
+      },
+    },
+    required: ['message'],
+  },
+})
   async addMessage(
     @Param('groupId') groupId: string,
     @Body('message') message: string,
