@@ -39,7 +39,7 @@ export class GroupInvitationsService {
 
     const sender = await this.usersService.findOneUser(senderId);
     const receiver = await this.usersService.findOneUser(receiverId);
-    const group = await this.groupService.findById(groupId);
+    const group = await this.groupService.findById(groupId,senderId);
 
     if (group.members.some((m) => m.user._id.toString() === receiverId)) {
       throw new HttpException(

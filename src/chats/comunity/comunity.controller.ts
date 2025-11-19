@@ -7,8 +7,8 @@ import {
   Request,
   Get,
   UseGuards,
-
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,33 +24,56 @@ import { CreateCommunityMessageDto } from '../dto/comunidadesDto/create-communit
 
 @Controller('community')
 @ApiTags('community')
-
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
-
 export class ComunidadesController {
   constructor(private readonly communityService: CommunityService) {}
 
-@Get()
-@ApiOperation({ summary: 'Obtener comunidades a las que pertenece el usuario autenticado' })
-async findAll(@Req() req: any) {
-  const userId = req.user._id; 
+  @Get()
+  @ApiOperation({
+    summary: 'Obtener comunidades a las que pertenece el usuario autenticado',
+  })
+  async findAll(@Req() req: any) {
+    const userId = req.user._id;
 
-  const data = await this.communityService.findAllByUser(userId);
+    const data = await this.communityService.findAllByUser(userId);
 
-  return {
-    err: false,
-    msg: 'Comunidades obtenidas correctamente',
-    data,
-  };
-}
+    return {
+      err: false,
+      msg: 'Comunidades obtenidas correctamente',
+      data,
+    };
+  }
 
+  @Get('all')
+  @ApiOperation({
+    summary: 'Obtener todas las comunidades con búsqueda y paginación',
+  })
+  async getAllCommunities(
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.communityService.getAllCommunities(
+      search,
+      page,
+      limit,
+    );
+
+    return {
+      err: false,
+      msg: 'Comunidades obtenidas correctamente',
+      ...data,
+    };
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener comunidad por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  async findById(@Param('id') id: string) {
-    const data = await this.communityService.findById(id);
+  async findById(@Param('id') id: string,@Req() req: any) {
+        const userId = req.user._id;
+
+    const data = await this.communityService.findById(id,userId);
     return {
       err: false,
       msg: 'Comunidad obtenida correctamente',
@@ -102,14 +125,15 @@ async findAll(@Req() req: any) {
     return {
       err: false,
       msg: 'Miembro eliminado correctamente por un administrador',
-    }
+    };
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  async deleteCommunity(@Param('id') id: string) {
-    const data = await this.communityService.removeCommunity(id);
+  async deleteCommunity(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user._id;
+    const data = await this.communityService.removeCommunity(id, userId);
     return {
       err: false,
       msg: 'Comunidad eliminada correctamente',
@@ -135,25 +159,25 @@ async findAll(@Req() req: any) {
     };
   }
 
-
-
   @Post(':id/messages')
-@ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
-@ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-@ApiBody({ type: CreateCommunityMessageDto })
-async addMessageToCommunity(
-  @Param('id') id: string,
-  @Body() dto: CreateCommunityMessageDto,
-  @Req() req: any,
-) {
-  const userId = req.user._id;
-  const data = await this.communityService.addMessage(id, userId, dto.message);
-  return {
-    err: false,
-    msg: 'Mensaje agregado correctamente a la comunidad',
-    data,
-  };
-}
-
-
+  @ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
+  @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
+  @ApiBody({ type: CreateCommunityMessageDto })
+  async addMessageToCommunity(
+    @Param('id') id: string,
+    @Body() dto: CreateCommunityMessageDto,
+    @Req() req: any,
+  ) {
+    const userId = req.user._id;
+    const data = await this.communityService.addMessage(
+      id,
+      userId,
+      dto.message,
+    );
+    return {
+      err: false,
+      msg: 'Mensaje agregado correctamente a la comunidad',
+      data,
+    };
+  }
 }

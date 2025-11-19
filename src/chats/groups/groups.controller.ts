@@ -60,8 +60,10 @@ export class GroupsController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener grupo por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
-  async findById(@Param('id') id: string) {
-    const data = await this.groupService.findById(id);
+  async findById(@Param('id') id: string,@Req() req: any) {
+      const userId = req.user._id;
+
+    const data = await this.groupService.findById(id,userId);
     return {
       err: false,
       msg: 'Grupo obtenido correctamente',
@@ -126,12 +128,11 @@ export class GroupsController {
 
     return {
       err: false,
-      msg: data.message,
       data,
     };
   }
 
-  @Post(':groupId/mensajes')
+  @Post(':groupId/messages')
   async addMessage(
     @Param('groupId') groupId: string,
     @Body('message') message: string,

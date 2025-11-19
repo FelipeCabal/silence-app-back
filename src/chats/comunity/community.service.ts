@@ -25,7 +25,7 @@ export class CommunityService {
     @InjectModel(UserSchema.name)
     private readonly userModel: Model<UserSchema>,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async create(dto: CreateComunidadDto, userId: string) {
     const exists = await this.comunidadesModel.findOne({
@@ -56,106 +56,139 @@ export class CommunityService {
       miembros: [miembro],
     });
 
-await this.userModel.updateOne(
-  { _id: userId },
-  { 
-    $push: { 
-      comunidades: { 
-        _id: comunidad._id,
-        nombre: comunidad.nombre,
-        imagen: comunidad.imagen ?? null,
-      } 
-    } 
-  },
-);
-
+    await this.userModel.updateOne(
+      { _id: userId },
+      {
+        $push: {
+          comunidades: {
+            _id: comunidad._id,
+            nombre: comunidad.nombre,
+            imagen: comunidad.imagen ?? null,
+          },
+        },
+      },
+    );
 
     return ComunidadResponseDto.fromModel(comunidad);
   }
 
   async findAllByUser(userId: string) {
-  const user = await this.userModel.findById(userId).lean();
-  console.log(user,"como estaas");
+    const user = await this.userModel.findById(userId).lean();
+    console.log(user, 'como estaas');
 
-  if (!user) {
-    throw new NotFoundException("Usuario no encontrado")
-  };
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
 
-  const communitySummaries = user.comunidades ?? [];
-  console.log(communitySummaries,"bro?")
+    const communitySummaries = user.comunidades ?? [];
+    console.log(communitySummaries, 'bro?');
 
-  if (communitySummaries.length == 0) {
-    throw new NotFoundException({
-      err:true,
-      msg:"el usuario no pertenece a ninguna comunidad"
-    })
+    if (communitySummaries.length == 0) {
+      throw new NotFoundException({
+        err: true,
+        msg: 'el usuario no pertenece a ninguna comunidad',
+      });
+    }
+
+    const communityIds = communitySummaries.map(
+      (c) => new Types.ObjectId(c._id),
+    );
+
+    const comunidades = await this.comunidadesModel
+      .find({ _id: { $in: communityIds } })
+      .lean();
+
+    return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
   }
 
-  const communityIds = communitySummaries.map(c => new Types.ObjectId(c._id));
+  async findById(id: string, userId: string) {
+  const comunidad = await this.comunidadesModel.findById(id).lean();
 
-  const comunidades = await this.comunidadesModel
-    .find({ _id: { $in: communityIds } })
-    .lean();
+  if (!comunidad) {
+    throw new NotFoundException('Comunidad no encontrada.');
+  }
 
-  return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
+  const esMiembro = comunidad.miembros?.some(
+    (m) => m.user._id.toString() === userId.toString()
+  );
+
+  if (!esMiembro) {
+    throw new ForbiddenException(
+      'No tienes permiso para ver esta comunidad. No eres miembro.'
+    );
+  }
+
+  return ComunidadResponseDto.fromModel(comunidad);
+}
+
+  async addMiembro(comunidadId: string, userId: string) {
+  const comunidadObjectId = new Types.ObjectId(comunidadId);
+  const userObjectId = new Types.ObjectId(userId);
+
+  const yaMiembro = await this.comunidadesModel.findOne({
+    _id: comunidadObjectId,
+    'miembros.user._id': userObjectId,
+  });
+
+  if (yaMiembro) {
+    throw new ConflictException('Ya es miembro de esta comunidad.');
+  }
+
+  const comunidad = await this.comunidadesModel.findById(comunidadObjectId).lean();
+  if (!comunidad) {
+    throw new NotFoundException('Comunidad no encontrada.');
+  }
+
+  const user = await this.userModel.findById(userObjectId).lean();
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
+  }
+
+  const nuevoMiembro = {
+    user: {
+      _id: userObjectId,
+      nombre: user.nombre,
+      avatar: user.imagen ?? null,
+    },
+    rol: Role.Member,
+  };
+
+  const result = await this.comunidadesModel.updateOne(
+    { _id: comunidadObjectId },
+    { $push: { miembros: nuevoMiembro } },
+  );
+
+  if (result.modifiedCount === 0) {
+    throw new NotFoundException('No se pudo agregar el miembro a la comunidad.');
+  }
+
+  // 6. Agregar comunidad al usuario con id + nombre
+  await this.userModel.updateOne(
+    { _id: userObjectId },
+    {
+      $addToSet: {
+        comunidades: {
+          _id: comunidadObjectId,
+          nombre: comunidad.nombre, 
+        },
+      },
+    },
+  );
+
+  return { message: 'Miembro agregado exitosamente.' };
 }
 
 
-  async findById(id: string) {
-    const comunidad = await this.comunidadesModel.findById(id).lean();
-
-    if (!comunidad) throw new NotFoundException('Comunidad no encontrada.');
-
-    return ComunidadResponseDto.fromModel(comunidad);
-  }
-
-  async addMiembro(comunidadId: string, userId: string) {
-    const comunidadObjectId = new Types.ObjectId(comunidadId);
-    const userObjectId = new Types.ObjectId(userId);
-
-    const comunidadExistente = await this.comunidadesModel.findOne({
-      _id: comunidadObjectId,
-      'miembros.user._id': userObjectId,
-    });
-
-    if (comunidadExistente) {
-      throw new ConflictException('Ya es miembro de esta comunidad.');
-    }
-
-    const user = await this.comunidadesModel.db
-      .collection('users')
-      .findOne({ _id: userObjectId });
-
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-
-    const nuevoMiembro = {
-      user: {
-        _id: userObjectId,
-        nombre: user.nombre,
-        avatar: user.avatar ?? null,
-      },
-      rol: Role.Member,
-    };
-
-    const result = await this.comunidadesModel.updateOne(
-      { _id: comunidadObjectId },
-      { $push: { miembros: nuevoMiembro } },
-    );
-
-    if (result.modifiedCount === 0) {
-      throw new NotFoundException('Comunidad no encontrada.');
-    }
-
-    return { message: 'Miembro agregado exitosamente.' };
-  }
-
-  async removeMember(communityId: string, memberId: string, requesterId: string) {
+  async removeMember(
+    communityId: string,
+    memberId: string,
+    requesterId: string,
+  ) {
     const communityObjectId = new Types.ObjectId(communityId);
     const memberObjectId = new Types.ObjectId(memberId);
     const requesterObjectId = new Types.ObjectId(requesterId);
 
     const comunidad = await this.comunidadesModel.findById(communityObjectId);
-
 
     if (!comunidad) {
       throw new NotFoundException('Comunidad no encontrada');
@@ -196,135 +229,179 @@ await this.userModel.updateOne(
     );
 
     await this.userModel.updateOne(
-  { _id: memberObjectId },
-  { $pull: { comunidades: { _id: communityObjectId } } },
-);
+      { _id: memberObjectId },
+      { $pull: { comunidades: { _id: communityObjectId } } },
+    );
 
     await this.redisService.client.del(`community:${comunidad._id}:members`);
 
     return {
       removed: true,
       message: 'Miembro eliminado correctamente por un administrador',
-    }
+    };
   }
 
-  async removeCommunity(comunidadId: string) {
-    const comunidadObjectId = new Types.ObjectId(comunidadId);
-
-    const comunidad = await this.comunidadesModel.findById(comunidadObjectId);
-    if (!comunidad) {
-      throw new NotFoundException('Comunidad no encontrada.');
-    }
-
-    await this.comunidadesModel.findByIdAndDelete(comunidadObjectId);
-    await this.userModel.updateMany(
-  { "comunidades._id": comunidadObjectId },
-  { $pull: { comunidades: { _id: comunidadObjectId } } },
-);
-
-    return { deleted: true, message: 'Comunidad eliminada exitosamente' };
-  }
-
-  async leaveCommunity(communityId: string, userId: string) {
-  const communityObjectId = new Types.ObjectId(communityId);
+  async removeCommunity(comunidadId: string, userId: string) {
+  const comunidadObjectId = new Types.ObjectId(comunidadId);
   const userObjectId = new Types.ObjectId(userId);
 
-  const comunidad = await this.comunidadesModel.findById(communityObjectId);
+  const comunidad = await this.comunidadesModel.findById(comunidadObjectId).lean();
 
   if (!comunidad) {
-    throw new NotFoundException('Comunidad no encontrada');
+    throw new NotFoundException('Comunidad no encontrada.');
   }
 
-  const miembro = comunidad.miembros.find(
-    (m) => m.user._id.toString() === userObjectId.toString(),
+  const esAdmin = comunidad.miembros.some(
+    (m) =>
+      m.user._id.toString() === userObjectId.toString() &&
+      m.rol === Role.Admin
   );
 
-  if (!miembro) {
-    throw new NotFoundException('No perteneces a esta comunidad');
+  if (!esAdmin) {
+    throw new ForbiddenException(
+      'Solo el administrador de la comunidad puede eliminarla.'
+    );
   }
 
-  if (miembro.rol === 'admin') {
-    const admins = comunidad.miembros.filter((m) => m.rol === 'admin');
+  await this.comunidadesModel.findByIdAndDelete(comunidadObjectId);
 
-    if (admins.length === 1) {
-      const otroMiembro = comunidad.miembros.find(
-        (m) => m.user._id.toString() !== userObjectId.toString(),
-      );
+  await this.userModel.updateMany(
+    { 'comunidades._id': comunidadObjectId },
+    { $pull: { comunidades: { _id: comunidadObjectId } } }
+  );
 
-      if (otroMiembro) {
-        otroMiembro.rol = 'admin';
-        await comunidad.save(); 
-      } else {
-        throw new BadRequestException(
-          'No puedes salir, no hay más miembros para asignar como admin',
+  return {
+    deleted: true,
+    message: 'Comunidad eliminada exitosamente.',
+  };
+}
+
+
+  async leaveCommunity(communityId: string, userId: string) {
+    const communityObjectId = new Types.ObjectId(communityId);
+    const userObjectId = new Types.ObjectId(userId);
+
+    const comunidad = await this.comunidadesModel.findById(communityObjectId);
+
+    if (!comunidad) {
+      throw new NotFoundException('Comunidad no encontrada');
+    }
+
+    const miembro = comunidad.miembros.find(
+      (m) => m.user._id.toString() === userObjectId.toString(),
+    );
+
+    if (!miembro) {
+      throw new NotFoundException('No perteneces a esta comunidad');
+    }
+
+    if (miembro.rol === 'admin') {
+      const admins = comunidad.miembros.filter((m) => m.rol === 'admin');
+
+      if (admins.length === 1) {
+        const otroMiembro = comunidad.miembros.find(
+          (m) => m.user._id.toString() !== userObjectId.toString(),
         );
+
+        if (otroMiembro) {
+          otroMiembro.rol = 'admin';
+          await comunidad.save();
+        } else {
+          throw new BadRequestException(
+            'No puedes salir, no hay más miembros para asignar como admin',
+          );
+        }
       }
     }
+
+    comunidad.miembros = comunidad.miembros.filter(
+      (m) => m.user._id.toString() !== userObjectId.toString(),
+    );
+
+    await comunidad.save();
+
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { comunidades: { _id: communityObjectId } } },
+    );
+
+    return {
+      left: true,
+      message: 'Has salido de la comunidad correctamente',
+    };
   }
 
-  comunidad.miembros = comunidad.miembros.filter(
-    (m) => m.user._id.toString() !== userObjectId.toString(),
-  );
+  async addMessage(comunidadId: string, userId: string, message: string) {
+    const comunidad = await this.comunidadesModel.findById(comunidadId);
 
-  await comunidad.save();
+    if (!comunidad) {
+      throw new NotFoundException('Comunidad no encontrada');
+    }
 
-  await this.userModel.updateOne(
-  { _id: userId },
-  { $pull: { comunidades: { _id: communityObjectId } } },
-);
+    const isMember = comunidad.miembros.some(
+      (m) => m.user._id.toString() === userId,
+    );
 
+    if (!isMember) {
+      throw new ForbiddenException(
+        'No puedes enviar mensajes en esta comunidad',
+      );
+    }
 
-  return {
-    left: true,
-    message: 'Has salido de la comunidad correctamente',
-  };
-}
+    if (!Array.isArray(comunidad.mensajes)) {
+      comunidad.mensajes = [];
+    }
 
+    comunidad.mensajes.push({
+      remitente: new Types.ObjectId(userId),
+      mensaje: message,
+      fecha: new Date(),
+    });
 
+    comunidad.lastMessage = message;
+    comunidad.lastMessageDate = new Date();
 
-async addMessage(
-  comunidadId: string,
-  userId: string,
-  message: string,
-) {
-  const comunidad = await this.comunidadesModel.findById(comunidadId);
+    await comunidad.save();
 
-  if (!comunidad) {
-    throw new NotFoundException('Comunidad no encontrada');
+    await this.redisService.client.del(`community:${comunidadId}:messages`);
+
+    return {
+      _id: comunidad._id,
+      mensaje: message,
+      remitente: userId,
+      fecha: new Date(),
+    };
   }
 
-  const isMember = comunidad.miembros.some(
-    (m) => m.user._id.toString() === userId,
-  );
+  async getAllCommunities(
+    search?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const filter: any = {};
 
-  if (!isMember) {
-    throw new ForbiddenException('No puedes enviar mensajes en esta comunidad');
+    if (search && search.trim()) {
+      filter.nombre = { $regex: search.trim(), $options: 'i' };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [total, comunidades] = await Promise.all([
+      this.comunidadesModel.countDocuments(filter),
+      this.comunidadesModel
+        .find(filter)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    return {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+      results: comunidades.map((c) => ComunidadResponseDto.fromModel(c)),
+    };
   }
-
-  if (!Array.isArray(comunidad.mensajes)) {
-    comunidad.mensajes = [];
-  }
-
-  comunidad.mensajes.push({
-    remitente: new Types.ObjectId(userId),
-    mensaje: message,
-    fecha: new Date(),
-  });
-
-  comunidad.lastMessage = message;
-  comunidad.lastMessageDate= new Date();
-
-  await comunidad.save();
-
-  await this.redisService.client.del(`community:${comunidadId}:messages`);
-
-  return {
-    _id: comunidad._id,
-    mensaje: message,
-    remitente: userId,
-    fecha: new Date(),
-  };
-}
-
-
 }

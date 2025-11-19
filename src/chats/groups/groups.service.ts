@@ -87,10 +87,19 @@ export class GroupService {
     return grupos.map((g) => GrupoResponseDto.fromModel(g));
   }
 
-  async findById(id: string) {
+  async findById(id: string, userId: string) {
     const grupo = await this.gruposModel.findById(id).lean();
 
     if (!grupo) throw new NotFoundException('Grupo no encontrado.');
+      const esMiembro = grupo.members?.some(
+    (m) => m.user._id.toString() === userId.toString(),
+  );
+
+  if (!esMiembro) {
+    throw new ForbiddenException(
+      'No tienes permiso para ver este grupo. No eres miembro.',
+    );
+  }
 
     return GrupoResponseDto.fromModel(grupo);
   }
@@ -268,7 +277,7 @@ export class GroupService {
     );
 
       await this.userModel.updateOne(
-    { _id: memberId },
+    { _id: memberObjectId },
     { $pull: { grupos: { _id: groupId } } },
   );
     if (result.modifiedCount === 0) {
