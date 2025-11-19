@@ -233,63 +233,67 @@ export class GroupService {
   }
 
   async removeMember(groupId: string, memberId: string, requesterId: string) {
-    const groupObjectId = new Types.ObjectId(groupId);
-    const memberObjectId = new Types.ObjectId(memberId);
-    const requesterObjectId = new Types.ObjectId(requesterId);
+  const groupObjectId = new Types.ObjectId(groupId);
+  const memberObjectId = new Types.ObjectId(memberId);
+  const requesterObjectId = new Types.ObjectId(requesterId);
 
-    const grupo = await this.gruposModel.findById(groupObjectId);
-    if (!grupo) {
-      throw new NotFoundException('Grupo no encontrado');
-    }
+  const grupo = await this.gruposModel.findById(groupObjectId);
 
-    const requester = grupo.members.find(
-      (m) => m.user._id.toString() === requesterObjectId.toString(),
-    );
-    if (!requester) {
-      throw new ForbiddenException('No perteneces a este grupo');
-    }
-
-    if (requester.rol !== Role.Admin) {
-      throw new ForbiddenException(
-        'Solo los administradores pueden eliminar miembros',
-      );
-    }
-
-    if (requesterId === memberId) {
-      throw new BadRequestException('No puedes eliminarte a ti mismo');
-    }
-
-    const miembroAEliminar = grupo.members.find(
-      (m) => m.user._id.toString() === memberObjectId.toString(),
-    );
-
-    if (!miembroAEliminar) {
-      throw new NotFoundException('El usuario no es miembro de este grupo');
-    }
-
-    if (miembroAEliminar.rol === Role.Admin) {
-      throw new ForbiddenException('No puedes eliminarte siendo admin');
-    }
-
-    const result = await this.gruposModel.updateOne(
-      { _id: groupObjectId },
-      { $pull: { members: { 'user._id': memberObjectId } } },
-    );
-
-      await this.userModel.updateOne(
-    { _id: memberObjectId },
-    { $pull: { grupos: { _id: groupId } } },
-  );
-    if (result.modifiedCount === 0) {
-      throw new BadRequestException('No se pudo eliminar el miembro');
-    }
-    await this.redisService.client.del(`group:${groupId}:members`);
-
-    return {
-      removed: true,
-      message: `Miembro eliminado correctamente`,
-    };
+  if (!grupo) {
+    throw new NotFoundException('Grupo no encontrado');
   }
+
+  const requester = grupo.members.find(
+    (m) => m.user._id.toString() === requesterObjectId.toString(),
+  );
+
+  if (!requester) {
+    throw new ForbiddenException('No perteneces a este grupo');
+  }
+
+  if (requester.rol !== Role.Admin) {
+    throw new ForbiddenException(
+      'Solo los administradores pueden eliminar miembros',
+    );
+  }
+
+  const miembroAEliminar = grupo.members.find(
+    (m) => m.user._id.toString() === memberObjectId.toString(),
+  );
+
+  if (!miembroAEliminar) {
+    throw new NotFoundException('El usuario no es miembro de este grupo');
+  }
+
+  if (requesterId === memberId) {
+    throw new BadRequestException('No puedes eliminarte a ti mismo');
+  }
+
+  if (miembroAEliminar.rol === Role.Admin) {
+    throw new ForbiddenException('No puedes eliminar a otro administrador');
+  }
+
+  const updatedMembers = grupo.members.filter(
+    (m) => m.user._id.toString() !== memberObjectId.toString(),
+  );
+
+  await this.gruposModel.updateOne(
+    { _id: groupObjectId },
+    { $set: { members: updatedMembers } },
+  );
+
+  await this.userModel.updateOne(
+    { _id: memberObjectId },
+    { $pull: { grupos: { _id: groupObjectId } } },
+  );
+
+  await this.redisService.client.del(`group:${groupId}:members`);
+
+  return {
+    removed: true,
+    message: 'Miembro eliminado correctamente por un administrador',
+  };
+}
 
   async addMessage(groupId: string, userId: string, message: string) {
     const grupo = await this.gruposModel.findById(groupId);
