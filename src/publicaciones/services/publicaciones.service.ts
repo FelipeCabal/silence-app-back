@@ -298,13 +298,44 @@ export class PublicacionesService {
             throw new HttpException("post not found", HttpStatus.NOT_FOUND);
         }
 
-        if (post.owner.toString() !== userId) {
+        if (post.owner._id.toString() !== userId) {
             throw new HttpException("You aren't authorized for this action", HttpStatus.FORBIDDEN);
         }
-        const result = await this.publicacionesModel.findByIdAndDelete(id).exec();
-        await this.redisService.client.del(`publicacion:${id}`);
-        await this.redisService.client.del('publicaciones:all');
-        /*await this.redisService.client.del(`publicaciones:user:${post.userId}`);*/
-        return result ? PublicacionResponseDto.fromModel(result) : null;
+
+        try {
+
+            const result = await this.publicacionesModel
+                .findByIdAndDelete(id)
+                .exec();
+
+            if (!result) {
+                throw new HttpException('error deleting post', HttpStatus.INTERNAL_SERVER_ERROR);
+
+            }
+
+            const postObjectId = new Types.ObjectId(id);
+
+            if (result.esAnonimo) {
+                await this.usersModel.updateOne(
+                    {
+                        $pull: { pubAnonimas: { id: postObjectId } },
+                    }
+                );
+            } else {
+                await this.usersModel.updateMany(
+                    {
+                        $pull: { publicaciones: { id: postObjectId } }
+                    }
+                )
+            }
+            await this.redisService.client.del(`publicacion:${id}`);
+            await this.redisService.client.del('publicaciones:all');
+            /*await this.redisService.client.del(`publicaciones:user:${post.userId}`);*/
+            return result ? PublicacionResponseDto.fromModel(result) : null;
+        } catch (error) {
+            throw new HttpException(
+                error.message || 'error processing request', HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 }
