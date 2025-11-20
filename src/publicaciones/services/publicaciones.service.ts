@@ -220,9 +220,9 @@ export class PublicacionesService {
      * @param data - The data to update the post
      * @returns The updated post, or null if not found
      */
-    async update(postId: string, data: UpdatePublicacionDto, userId: string): Promise<PublicacionResponseDto | null> {
+    async update(postId: string, data: UpdatePublicacionDto, userId: string) {
 
-        const post = await this.publicacionesModel.findById(postId)
+        const post = await this.publicacionesModel.findById(postId);
 
         if (!post) {
             throw new HttpException('post not found', HttpStatus.NOT_FOUND);
@@ -232,58 +232,87 @@ export class PublicacionesService {
             throw new HttpException("You aren't authorized for this action", HttpStatus.FORBIDDEN);
         }
 
-        try {
-            const updatedPost = await this.publicacionesModel
-                .findByIdAndUpdate(postId, data, { new: true })
-                .exec();
 
-            if (!updatedPost) {
-                throw new HttpException('Error updating post', HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+        const updatedPost = await this.publicacionesModel
+            .findByIdAndUpdate(postId, data, { new: true })
+            .exec();
 
-            const postObjectId = new Types.ObjectId(postId)
+        if (!updatedPost) {
+            throw new HttpException('Error updating post', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        const postObjectId = new Types.ObjectId(postId);
+
+        //detectar si cambió estado de anónimo a público o viceversa 
+        const cambioAnonimo = post.esAnonimo !== updatedPost.esAnonimo;
 
 
-            if (updatedPost.esAnonimo) {
-                await this.usersModel.updateOne(
-                    { "pubAnonimas.id": postObjectId },
-                    {
-                        $set: {
-                            'pubAnonimas.$.summary': {
-                                esAnonimo: updatedPost.esAnonimo,
-                                description: updatedPost.description,
-                                imagen: updatedPost.imagen
-                            }
-                        }
-                    },
-                );
-            } else {
+        if (cambioAnonimo) {
 
-                await this.usersModel.updateOne(
-                    { "publicaciones.id": postObjectId },
-                    {
-                        $set: {
-                            'publicaciones.$.summary': {
+            //borrar de ambas listas
+            await this.usersModel.updateOne(
+                { _id: userId },
+                {
+                    $pull: {
+                        publicaciones: { id: postObjectId },
+                        pubAnonimas: { id: postObjectId }
+                    }
+                }
+            );
+
+            // insertar en la lista correcta
+            const lista = updatedPost.esAnonimo ? "pubAnonimas" : "publicaciones";
+
+            await this.usersModel.updateOne(
+                { _id: userId },
+                {
+                    $push: {
+                        [lista]: {
+                            id: postObjectId,
+                            summary: {
                                 esAnonimo: updatedPost.esAnonimo,
                                 description: updatedPost.description,
                                 imagen: updatedPost.imagen
                             }
                         }
                     }
-                )
-            }
-            await this.redisService.client.del(`publicacion:${postId}`);
-            await this.redisService.client.del('publicaciones:all');
-            /*if (post) {
-              await this.redisService.client.del(`publicaciones:user:${post.userId}`);
-            }*/
-            return updatedPost ? PublicacionResponseDto.fromModel(updatedPost) : null;
+                }
+            );
 
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'error processing request', HttpStatus.INTERNAL_SERVER_ERROR);
+        } else {
+            // sólo cambiaron description o imagen 
+            const updateFields: Record<string, any> = {};
+
+            if (data.description !== undefined) {
+                updateFields["summary.description"] = data.description;
+            }
+            if (data.imagen !== undefined) {
+                updateFields["summary.imagen"] = data.imagen;
+            }
+
+            const arrayName = post.esAnonimo ? "pubAnonimas" : "publicaciones";
+
+            await this.usersModel.updateOne(
+                { _id: userId, [`${arrayName}.id`]: postObjectId },
+                {
+                    $set: {
+                        [`${arrayName}.$.summary`]: {
+                            esAnonimo: updatedPost.esAnonimo,
+                            description: updatedPost.description,
+                            imagen: updatedPost.imagen
+                        }
+                    }
+                }
+            );
         }
+
+        // Limpiar cache redis
+        await this.redisService.client.del(`publicacion:${postId}`);
+        await this.redisService.client.del('publicaciones:all');
+
+        return PublicacionResponseDto.fromModel(updatedPost);
     }
+
 
     /**
      * Remove a post by its ID

@@ -128,7 +128,7 @@ export class PublicacionesController {
    * @returns post updated
    */
   @Patch(':postId')
-  @ApiParam({ name: 'id', description: 'ID of the post to update' })
+  @ApiParam({ name: 'postId', description: 'ID of the post to update' })
   @ApiOperation({ summary: 'Update a post' })
   @ApiResponse({
     status: 200,
