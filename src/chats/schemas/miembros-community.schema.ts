@@ -1,13 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Role } from 'src/config/enums/roles.enum';
-import { UserSummary } from '../../users/entities/user.model';
+import { User } from '../../users/entities/user.model';
 
 @Schema({ timestamps: true })
 export class MiembrosComunidades extends Document {
-
-  @Prop({ type: UserSummary, required: true })
-  usuarioSummary: UserSummary;
+  @Prop({ type: User, required: true })
+  user: User;
 
   @Prop({
     type: String,
@@ -17,4 +16,5 @@ export class MiembrosComunidades extends Document {
   rol: Role;
 }
 
-export const MiembrosComunidadesSchema = SchemaFactory.createForClass(MiembrosComunidades);
+export const MiembrosComunidadesSchema =
+  SchemaFactory.createForClass(MiembrosComunidades);

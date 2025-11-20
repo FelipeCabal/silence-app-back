@@ -4,28 +4,33 @@ import { AppService } from './app.service';
 import { PublicacionesModule } from './publicaciones/publicaciones.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
-import { typeOrmConfig, mongooseConfigUri } from './config/data.source';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { mongooseConfigUri } from './config/data.source';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
-//import { LikesModule } from './likes/likes.module';
 import { ChatsModule } from './chats/chats.module';
+import { LikesModule } from './likes/likes.module';
+import { RedisModule } from './redis/redis.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { ReportesModule } from './reportes/reportes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-   // TypeOrmModule.forRoot(typeOrmConfig),
     MongooseModule.forRoot(mongooseConfigUri),
     PublicacionesModule,
+    ChatsModule,
+    RedisModule,
     UsersModule,
     AuthModule,
-    //LikesModule,
-    ChatsModule
+    LikesModule,
+    ChatsModule,
+    FirebaseModule,
+    ReportesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
-  exports: [ MongooseModule],
+  exports: [MongooseModule],
 })
 export class AppModule {}

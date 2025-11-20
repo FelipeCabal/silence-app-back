@@ -8,6 +8,7 @@ import { UserQueries } from '../dto/querie.dto';
 import { UserSchema } from '../entities/users.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { RedisService } from '../../redis/redis.service';
 
 @Injectable()
 export class UsersService {
@@ -15,7 +16,48 @@ export class UsersService {
     @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
     @Inject(forwardRef(() => SolicitudesAmistadService))
     private readonly solicitudAmistadServices: SolicitudesAmistadService,
+    private readonly redisService: RedisService,
   ) { }
+
+  private readonly TTL_USER_SECONDS = 600;
+  private readonly TTL_COLLECTION_SECONDS = 600;
+
+  private buildSearchKey(userId: string, q: UserQueries): string {
+    const parts = [
+      'users:search',
+      userId,
+      q.search || '',
+      q.country || '',
+      (q.limit || 0).toString(),
+    ];
+    return parts.join(':');
+  }
+
+  private async cacheSet(key: string, value: any, ttl: number) {
+    try {
+      await this.redisService.client.set(key, JSON.stringify(value), 'EX', ttl);
+    } catch (err) {
+
+    }
+  }
+
+  /** Get & parse JSON cache */
+  private async cacheGet<T = any>(key: string): Promise<T | null> {
+    try {
+      const raw = await this.redisService.client.get(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async invalidate(keys: string[]) {
+    try {
+      if (keys.length) {
+        await this.redisService.client.del(...keys);
+      }
+    } catch { }
+  }
 
   /**
    * Función para crear un usuario
@@ -30,7 +72,12 @@ export class UsersService {
 
     createUser.password = bcrypt.hashSync(createUser.password, SALT_ROUNDS);
     const user = new this.userModel(createUser);
-    return user.save();
+    const saved = await user.save();
+    const safe = { ...saved.toObject(), password: undefined };
+
+    this.cacheSet(`user:${saved._id}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`user:email:${saved.email}`, { ...saved.toObject() }, this.TTL_USER_SECONDS);
+    return saved;
   }
 
   /**
@@ -40,24 +87,23 @@ export class UsersService {
    * @returns lista de usuarios que cumplen con los criterios de búsqueda
    */
   async findAllUsers(userId: string, userQueries: UserQueries): Promise<any[]> {
-    let query: any = {};
+    const cacheKey = this.buildSearchKey(userId, userQueries);
+    const cached = await this.cacheGet<any[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    query._id = { $ne: userId }
+    let query: any = { _id: { $ne: userId } };
 
-    // Filtro por nombre o email
     if (userQueries.search) {
       query.$or = [
         { nombre: { $regex: userQueries.search, $options: 'i' } },
         { email: { $regex: userQueries.search, $options: 'i' } },
       ];
     }
-
-    // Filtro por país
     if (userQueries.country) {
       query.pais = { $regex: userQueries.country, $options: 'i' };
     }
-
-    //const fieldsToSelect = ' nombre descripcion email imagen'
 
     const users = await this.userModel
       .find(query)
@@ -81,27 +127,31 @@ export class UsersService {
       fechaNto: user.fechaNto,
       sexo: user.sexo,
       pais: user.pais
-    }))
+    }));
 
+    this.cacheSet(cacheKey, result, this.TTL_COLLECTION_SECONDS);
     return result;
   }
 
   async findAllFriends(userId: string) {
-    // Primero obtenemos las solicitudes aceptadas
-    const acceptedRequests = await this.solicitudAmistadServices.findAcceptedFriendships(userId);
+    const cacheKey = `users:friends:${userId}`;
+    const cached = await this.cacheGet<any[]>(cacheKey);
+    if (cached) return cached;
 
+    const acceptedRequests = await this.solicitudAmistadServices.findAcceptedFriendships(userId);
     if (!acceptedRequests.length) {
+      this.cacheSet(cacheKey, [], this.TTL_COLLECTION_SECONDS);
       return [];
     }
-
-    // Extraemos los "otros usuarios" (los amigos)
     const amigos = acceptedRequests.map(request => {
       const isSender = request.userEnvia._id.toString() === userId;
-      const amigo = isSender ? request.userRecibe : request.userEnvia;
-
-      return amigo
+      const amigo: any = isSender ? request.userRecibe : request.userEnvia;
+      const safe: any = { ...amigo };
+      if ('password' in safe) delete safe.password;
+      safe._id = safe._id?.toString?.() || safe._id;
+      return safe;
     });
-
+    this.cacheSet(cacheKey, amigos, this.TTL_COLLECTION_SECONDS);
     return amigos;
   }
 
@@ -111,15 +161,17 @@ export class UsersService {
    * @returns Usuario
    */
   async findOneUser(id: string) {
-    const user = await this.userModel.findById(id).select('-password').lean().exec();
+    const cacheKey = `user:${id}`;
+    const cached = await this.cacheGet<any>(cacheKey);
+    if (cached) return cached;
 
+    const user = await this.userModel.findById(id).select('-password').lean().exec();
     if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND)
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-    return {
-      ...user,
-      _id: user._id.toString(),
-    }
+    const safe = { ...user, _id: user._id.toString() };
+    this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
+    return safe;
   }
 
   /**
@@ -133,18 +185,32 @@ export class UsersService {
       updateUser.password = bcrypt.hashSync(updateUser.password, SALT_ROUNDS);
     }
 
-    const updated = await this.userModel.findByIdAndUpdate(id, updateUser, {
-      new: true,
-    }).lean();
+    // Obtener email previo para invalidar cache por email si cambia
+    const previous = await this.userModel.findById(id).select('email').lean();
+    if (!previous) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
 
+    const updated = await this.userModel.findByIdAndUpdate(id, updateUser, { new: true }).lean();
     if (!updated) {
       throw new HttpException("User hasn't been updated", HttpStatus.CONFLICT);
     }
 
-    return {
-      ...updated,
-      _id: updated._id.toString()
-    };
+    const safe = { ...updated, _id: updated._id.toString() };
+
+    await this.invalidate([
+      `user:${id}`,
+      `profile:${id}`,
+      `user:email:${previous.email}`,
+      `user:email:${updated.email}`,
+      `users:friends:${id}`,
+    ]);
+
+    this.cacheSet(`user:${id}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`user:email:${updated.email}`, safe, this.TTL_USER_SECONDS);
+    this.cacheSet(`profile:${id}`, safe, this.TTL_USER_SECONDS);
+
+    return safe;
   }
 
   /**
@@ -153,11 +219,16 @@ export class UsersService {
    * @returns usuario eliminado
    */
   async remove(id: string) {
-    const userDelete = await this.userModel.findByIdAndDelete(id);
-
+    const userDelete = await this.userModel.findByIdAndDelete(id).lean();
     if (!userDelete) {
-      throw new HttpException("User can't be delete", HttpStatus.CONFLICT)
+      throw new HttpException("User can't be delete", HttpStatus.CONFLICT);
     }
+    await this.invalidate([
+      `user:${id}`,
+      `profile:${id}`,
+      `user:email:${userDelete.email}`,
+      `users:friends:${id}`,
+    ]);
   }
 
   /**
@@ -166,13 +237,21 @@ export class UsersService {
    * @returns user
    */
   async findByEmail(email: string) {
-    const user = await this.userModel.findOne({ email });
+    const cacheKey = `user:email:${email}`;
+    const cached = await this.cacheGet<any>(cacheKey);
+    if (cached) return cached;
 
+    // use .lean() to return a plain object (avoids needing to call toObject())
+    const user = await this.userModel.findOne({ email }).lean().exec();
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
+    const u: any = user;
+    const safe = { ...u, password: u.password };
+    this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
 
-    return user;
+    this.cacheSet(`user:${u._id}`, { ...safe, password: undefined }, this.TTL_USER_SECONDS);
+    return safe;
   }
 
   /**

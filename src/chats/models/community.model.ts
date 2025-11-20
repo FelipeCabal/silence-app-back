@@ -1,7 +1,7 @@
 import { Prop } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 
-export class CommunitySummary {
+export class Community {
   @Prop({ type: Types.ObjectId })
   _id: Types.ObjectId;
 

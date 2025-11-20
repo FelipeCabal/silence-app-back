@@ -3,6 +3,7 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,9 +11,9 @@ import { InvitacionesGrupos } from 'src/chats/schemas/invitations.schema';
 import { CreateInvitationDto } from 'src/chats/dto/invitation/request/CreateInvitationDto';
 import { UsersService } from 'src/users/services/users.service';
 import { Status } from 'src/config/enums/status.enum';
-import { GroupInvitationsModule } from 'src/chats/module/GroupInvitationsModule';
 import { InvitacionSimpleModel } from 'src/chats/models/InvitacionSimpleModel';
 import { GroupService } from 'src/chats/groups/groups.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class GroupInvitationsService {
@@ -21,6 +22,7 @@ export class GroupInvitationsService {
     private readonly groupInvitationModel: Model<InvitacionesGrupos>,
     private readonly usersService: UsersService,
     private readonly groupService: GroupService,
+    private readonly redisService: RedisService,
   ) {}
 
   async create(data: CreateInvitationDto): Promise<InvitacionSimpleModel> {
@@ -37,7 +39,7 @@ export class GroupInvitationsService {
     const receiver = await this.usersService.findOneUser(receiverId);
     const group = await this.groupService.findById(groupId);
 
-    if (group.membersSummary.some((m) => m._id.toString() === receiverId)) {
+    if (group.members.some((m) => m.user._id.toString() === receiverId)) {
       throw new HttpException(
         'El usuario ya está en el grupo',
         HttpStatus.BAD_REQUEST,
@@ -45,8 +47,8 @@ export class GroupInvitationsService {
     }
 
     const existing = await this.groupInvitationModel.findOne({
-      'usuarioSummary._id': receiver._id,
-      'groupSummary._id': group.id,
+      'user._id': receiver._id,
+      'group._id': group.id,
       status: Status.Pendiente,
     });
 
@@ -58,18 +60,20 @@ export class GroupInvitationsService {
     }
 
     const newInvitation = await this.groupInvitationModel.create({
-      usuarioSummary: {
+      user: {
         _id: receiver._id,
         nombre: receiver.nombre,
         imagen: receiver.imagen,
       },
-      groupSummary: {
+      group: {
         _id: group.id,
         nombre: group.nombre,
         imagen: group.imagen,
       },
       status: Status.Pendiente,
     });
+
+    await this.redisService.client.del(`groupInvitations:user:${receiverId}`);
 
     return InvitacionSimpleModel.fromEntity(newInvitation);
   }
@@ -91,10 +95,9 @@ export class GroupInvitationsService {
       );
     }
 
-    if (invitation.usuarioSummary._id.toString() !== userId) {
-      throw new HttpException(
+    if (invitation.user._id.toString() !== userId.toString()) {
+      throw new UnauthorizedException(
         'No estás autorizado para aceptar esta invitación',
-        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -102,8 +105,13 @@ export class GroupInvitationsService {
     await invitation.save();
 
     await this.groupService.addUserToGroup(
-      invitation.groupSummary._id.toString(),
-      invitation.usuarioSummary._id,
+      invitation.group._id.toString(),
+      invitation.user._id.toString(),
+    );
+
+    await this.redisService.client.del(`groupInvitations:user:${userId}`);
+    await this.redisService.client.del(
+      `group:${invitation.group._id.toString()}:members`,
     );
 
     return InvitacionSimpleModel.fromEntity(invitation);
@@ -116,7 +124,7 @@ export class GroupInvitationsService {
       throw new NotFoundException('Invitación no encontrada');
     }
 
-    if (invitation.usuarioSummary._id.toString() !== userId) {
+    if (invitation.user._id.toString() !== userId) {
       throw new HttpException(
         'No estás autorizado para rechazar esta invitación',
         HttpStatus.UNAUTHORIZED,
@@ -124,23 +132,58 @@ export class GroupInvitationsService {
     }
 
     await this.groupInvitationModel.deleteOne({ _id: invitationId });
+
+    await this.redisService.client.del(`groupInvitations:user:${userId}`);
   }
 
   async findByUser(userId: string): Promise<InvitacionSimpleModel[]> {
+    const cacheKey = `groupInvitations:user:${userId}`;
+    const cached = await this.redisService.client.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const invitations = await this.groupInvitationModel.find({
-      'usuarioSummary._id': userId,
+      'user._id': userId,
     });
-    return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
+    const result = invitations.map((inv) =>
+      InvitacionSimpleModel.fromEntity(inv),
+    );
+
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      600,
+    );
+    return result;
   }
 
   async findOne(id: string): Promise<InvitacionSimpleModel | null> {
+    const cacheKey = `groupInvitations:invitation:${id}`;
+    const cached = await this.redisService.client.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const invitation = await this.groupInvitationModel.findById(id);
-    return invitation ? InvitacionSimpleModel.fromEntity(invitation) : null;
+    if (!invitation) {
+      return null;
+    }
+
+    const result = InvitacionSimpleModel.fromEntity(invitation);
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      600,
+    );
+    return result;
   }
 
   async findSimpleByUser(userId: string): Promise<InvitacionSimpleModel[]> {
     const invitations = await this.groupInvitationModel.find({
-      'usuarioSummary._id': userId,
+      'user._id': userId,
     });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }

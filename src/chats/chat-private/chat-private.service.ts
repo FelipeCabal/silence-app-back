@@ -10,48 +10,72 @@ import { ChatPrivado } from '../schemas/chats.schema';
 import { ChatPrivadoResponseDto } from '../response/chat-private.response';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 import { FriendRequest } from 'src/users/entities/solicitud.model';
+import { Status } from 'src/config/enums/status.enum';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class ChatPrivateService {
   constructor(
     @InjectModel(ChatPrivado.name)
     private readonly chatPrivadoModel: Model<ChatPrivado>,
-    
+
     @InjectModel(FriendRequest.name)
     private readonly friendRequestModel: Model<FriendRequest>,
+
+    private readonly redisService: RedisService,
   ) {}
 
- 
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
     try {
-      const friendship = await this.friendRequestModel.findById(dto.amistad).lean();
-      console.log(friendship)
-      if (!friendship) {
-        throw new NotFoundException('La solicitud de amistad no existe.');
-      }
+      const friendship = await this.friendRequestModel
+        .findOne({
+          _id: dto.amistad,
+          status: Status.Aceptada,
+        })
+        .lean();
 
-      const usuario1 = friendship.userEnvia;
-      const usuario2 = friendship.userRecibe;
+      if (!friendship) {
+        throw new NotFoundException(
+          'La solicitud de amistad no existe o no ha sido aceptada.',
+        );
+      }
+      const usuario1 = {
+        _id: friendship.userEnvia,
+        nombre: friendship.userEnvia.nombre,
+      };
+
+      const usuario2 = {
+        _id: friendship.userRecibe,
+        nombre: friendship.userRecibe.nombre,
+      };
 
       const exists = await this.chatPrivadoModel.findOne({
         $or: [
-          { 'usuario1._id': usuario1._id, 'usuario2._id': usuario2._id },
-          { 'usuario1._id': usuario2._id, 'usuario2._id': usuario1._id },
+          {
+            'amistad.usuario1._id': usuario1._id,
+            'amistad.usuario2._id': usuario2._id,
+          },
+          {
+            'amistad.usuario1._id': usuario2._id,
+            'amistad.usuario2._id': usuario1._id,
+          },
         ],
       });
-
       if (exists) {
         throw new ConflictException('El chat privado ya existe.');
       }
 
       const chat = await this.chatPrivadoModel.create({
-        amistadSummary: {
+        amistad: {
           _id: friendship._id,
           usuario1,
           usuario2,
         },
         lastMessage: dto.lastMessage ?? null,
       });
+
+      await this.redisService.client.del(`private-chats:${usuario1._id}`);
+      await this.redisService.client.del(`private-chats:${usuario2._id}`);
 
       return ChatPrivadoResponseDto.fromModel(chat.toObject());
     } catch (err) {
@@ -68,17 +92,35 @@ export class ChatPrivateService {
   }
 
   async findAllByUser(userId: string): Promise<ChatPrivadoResponseDto[]> {
+    const cacheKey = `private-chats:${userId}`;
+    const cachedChats = await this.redisService.client.get(cacheKey);
+
+    if (cachedChats) {
+      return JSON.parse(cachedChats);
+    }
+
     const chats = await this.chatPrivadoModel
       .find({
         $or: [
-          { 'amistadSummary.usuario1': new Types.ObjectId(userId) },
-          { 'amistadSummary.usuario2': new Types.ObjectId(userId) },
+          { 'amistad.usuario1': new Types.ObjectId(userId) },
+          { 'amistad.usuario2': new Types.ObjectId(userId) },
         ],
       })
       .sort({ updatedAt: -1 })
       .lean();
 
-    return chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
+    const chatDtos = chats.map((chat) =>
+      ChatPrivadoResponseDto.fromModel(chat),
+    );
+
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(chatDtos),
+      'EX',
+      3600,
+    );
+
+    return chatDtos;
   }
 
   async updateLastMessage(id: string, message: string) {

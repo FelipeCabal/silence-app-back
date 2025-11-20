@@ -6,13 +6,15 @@ import { Comentario } from '../models/comentario.model';
 import { CreateComentarioDto } from '../dto/requests/comentarios/create-comentario.dto';
 import { UpdateComentarioDto } from '../dto/requests/comentarios/update-comentario.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class ComentariosService {
   constructor(
     @InjectModel(Publicacion.name)
     private publicacionesModel: Model<Publicacion>,
-  ) {}
+    private readonly redisService: RedisService,
+  ) { }
 
   /**
    * Create a new comment
@@ -38,6 +40,7 @@ export class ComentariosService {
     publicacion.cantComentarios = publicacion.comentarios.length;
 
     await publicacion.save();
+    await this.redisService.client.del(`publicacion:${publicacionId}`);
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -78,6 +81,7 @@ export class ComentariosService {
     });
 
     await publicacion.save();
+    await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -103,6 +107,7 @@ export class ComentariosService {
     publicacion.cantComentarios = publicacion.comentarios.length;
 
     await publicacion.save();
+    await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
 
     return { deleted: true };
   }
