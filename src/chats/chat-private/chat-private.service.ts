@@ -23,7 +23,7 @@ export class ChatPrivateService {
     private readonly friendRequestModel: Model<FriendRequest>,
 
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async create(dto: CreateChatPrivadoDto): Promise<ChatPrivadoResponseDto> {
     try {
@@ -109,7 +109,9 @@ export class ChatPrivateService {
       .sort({ updatedAt: -1 })
       .lean();
 
-    const chatDtos = chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
+    const chatDtos = chats.map((chat) =>
+      ChatPrivadoResponseDto.fromModel(chat),
+    );
 
     await this.redisService.client.set(
       cacheKey,

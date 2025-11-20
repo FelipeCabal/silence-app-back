@@ -23,7 +23,7 @@ export class GroupService {
     private readonly invitacionesModel: Model<InvitacionesGrupos>,
     private readonly userService: UsersService,
     private readonly redisService: RedisService, // Inject RedisService
-  ) { }
+  ) {}
 
   async create(dto: CreateGrupoDto, creatorId: string) {
     const users = await this.gruposModel.db
@@ -50,9 +50,6 @@ export class GroupService {
 
     return GrupoResponseDto.fromModel(grupo);
   }
-
-
-
 
   async findAll() {
     const grupos = await this.gruposModel.find().lean();

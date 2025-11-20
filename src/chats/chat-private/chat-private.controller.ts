@@ -11,7 +11,14 @@ import {
 } from '@nestjs/common';
 import { ChatPrivateService } from './chat-private.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { ApiBody, ApiOperation, ApiTags, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOperation,
+  ApiTags,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 
 @Controller('chat-privado')
@@ -19,7 +26,7 @@ import { CreateChatPrivadoDto } from '../request/chat-private.dto';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class ChatPrivateController {
-  constructor(private readonly chatPrivateService: ChatPrivateService) { }
+  constructor(private readonly chatPrivateService: ChatPrivateService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear chat privado entre dos usuarios' })

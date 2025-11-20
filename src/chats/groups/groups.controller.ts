@@ -24,7 +24,7 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class GroupsController {
-  constructor(private readonly groupService: GroupService) { }
+  constructor(private readonly groupService: GroupService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
@@ -39,7 +39,6 @@ export class GroupsController {
       data,
     };
   }
-
 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los grupos' })

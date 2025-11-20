@@ -5,7 +5,7 @@ import { User } from 'src/users/entities/user.model';
 export class Amistad {
   @Prop({ type: Types.ObjectId })
   _id: Types.ObjectId;
- @Prop({ type: User })
+  @Prop({ type: User })
   usuario1: User;
 
   @Prop({ type: User })

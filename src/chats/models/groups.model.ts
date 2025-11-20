@@ -1,8 +1,6 @@
 import { Prop } from '@nestjs/mongoose';
 
-
-export class Group{
-
+export class Group {
   @Prop()
   readonly _id: string;
   @Prop()

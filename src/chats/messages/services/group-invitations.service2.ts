@@ -23,7 +23,7 @@ export class GroupInvitationsService {
     private readonly usersService: UsersService,
     private readonly groupService: GroupService,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async create(data: CreateInvitationDto): Promise<InvitacionSimpleModel> {
     const { senderId, receiverId, groupId } = data;
@@ -78,7 +78,10 @@ export class GroupInvitationsService {
     return InvitacionSimpleModel.fromEntity(newInvitation);
   }
 
-  async accept(invitationId: string, userId: string): Promise<InvitacionSimpleModel> {
+  async accept(
+    invitationId: string,
+    userId: string,
+  ): Promise<InvitacionSimpleModel> {
     const invitation = await this.groupInvitationModel.findById(invitationId);
 
     if (!invitation) {
@@ -93,7 +96,9 @@ export class GroupInvitationsService {
     }
 
     if (invitation.user._id.toString() !== userId.toString()) {
-      throw new UnauthorizedException('No estás autorizado para aceptar esta invitación');
+      throw new UnauthorizedException(
+        'No estás autorizado para aceptar esta invitación',
+      );
     }
 
     invitation.status = Status.Aceptada;
@@ -105,7 +110,9 @@ export class GroupInvitationsService {
     );
 
     await this.redisService.client.del(`groupInvitations:user:${userId}`);
-    await this.redisService.client.del(`group:${invitation.group._id.toString()}:members`);
+    await this.redisService.client.del(
+      `group:${invitation.group._id.toString()}:members`,
+    );
 
     return InvitacionSimpleModel.fromEntity(invitation);
   }
@@ -139,9 +146,16 @@ export class GroupInvitationsService {
     const invitations = await this.groupInvitationModel.find({
       'user._id': userId,
     });
-    const result = invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
+    const result = invitations.map((inv) =>
+      InvitacionSimpleModel.fromEntity(inv),
+    );
 
-    await this.redisService.client.set(cacheKey, JSON.stringify(result), 'EX', 600);
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      600,
+    );
     return result;
   }
 
@@ -158,7 +172,12 @@ export class GroupInvitationsService {
     }
 
     const result = InvitacionSimpleModel.fromEntity(invitation);
-    await this.redisService.client.set(cacheKey, JSON.stringify(result), 'EX', 600);
+    await this.redisService.client.set(
+      cacheKey,
+      JSON.stringify(result),
+      'EX',
+      600,
+    );
     return result;
   }
 

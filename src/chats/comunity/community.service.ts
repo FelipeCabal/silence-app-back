@@ -21,7 +21,7 @@ export class CommunityService {
     @InjectModel(MiembrosComunidades.name)
     private readonly miembrosModel: Model<MiembrosComunidades>,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
 
   async create(dto: CreateComunidadDto, userId: string) {
     const exists = await this.comunidadesModel.findOne({
@@ -130,11 +130,13 @@ export class CommunityService {
 
     const result = await this.comunidadesModel.updateOne(
       { _id: comunidadObjectId },
-      { $pull: { miembros: { 'user._id': { $eq: userObjectId } } } }
+      { $pull: { miembros: { 'user._id': { $eq: userObjectId } } } },
     );
 
     if (result.modifiedCount === 0) {
-      throw new BadRequestException('No se eliminó el miembro (no coincidió en la base de datos)');
+      throw new BadRequestException(
+        'No se eliminó el miembro (no coincidió en la base de datos)',
+      );
     }
 
     await this.redisService.client.del(`community:${comunidadId}:members`);

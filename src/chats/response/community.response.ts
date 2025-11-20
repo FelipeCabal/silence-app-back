@@ -1,17 +1,17 @@
-import { Comunidades } from "../schemas/community.schema";
-import { Members } from "../models/member.model";
-import { ApiProperty } from "@nestjs/swagger";
+import { Comunidades } from '../schemas/community.schema';
+import { Members } from '../models/member.model';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class ComunidadResponseDto {
-    @ApiProperty()
+  @ApiProperty()
   id: string;
-    @ApiProperty()
+  @ApiProperty()
   nombre: string;
-    @ApiProperty()
+  @ApiProperty()
   descripcion?: string;
-    @ApiProperty()
+  @ApiProperty()
   imagen?: string;
-    @ApiProperty()
+  @ApiProperty()
   miembros: Members[];
 
   static fromModel(model: Comunidades): ComunidadResponseDto {

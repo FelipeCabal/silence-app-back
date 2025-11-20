@@ -5,7 +5,6 @@ import { User } from '../../users/entities/user.model';
 
 @Schema({ timestamps: true })
 export class MiembrosComunidades extends Document {
-
   @Prop({ type: User, required: true })
   user: User;
 
@@ -17,4 +16,5 @@ export class MiembrosComunidades extends Document {
   rol: Role;
 }
 
-export const MiembrosComunidadesSchema = SchemaFactory.createForClass(MiembrosComunidades);
+export const MiembrosComunidadesSchema =
+  SchemaFactory.createForClass(MiembrosComunidades);

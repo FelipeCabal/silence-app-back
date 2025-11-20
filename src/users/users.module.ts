@@ -5,7 +5,10 @@ import { SolicitudesController } from './controllers/solicitudes.controller';
 import { SolicitudesAmistadService } from './services/solicitudesAmistad.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { userModelSchema, UserSchema } from './entities/users.schema';
-import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema';
+import {
+  FriendRequest,
+  FriendRequestSchema,
+} from './entities/solicitud.schema';
 import { ChatsModule } from 'src/chats/chats.module';
 import { RedisModule } from '../redis/redis.module';
 
@@ -18,14 +21,14 @@ import { RedisModule } from '../redis/redis.module';
       },
       {
         name: FriendRequest.name,
-        schema: FriendRequestSchema
-      }
+        schema: FriendRequestSchema,
+      },
     ]),
     forwardRef(() => ChatsModule),
-    RedisModule
+    RedisModule,
   ],
   controllers: [UsersController, SolicitudesController],
   providers: [UsersService, SolicitudesAmistadService],
-  exports: [MongooseModule, SolicitudesAmistadService, UsersService]
+  exports: [MongooseModule, SolicitudesAmistadService, UsersService],
 })
-export class UsersModule { }
+export class UsersModule {}

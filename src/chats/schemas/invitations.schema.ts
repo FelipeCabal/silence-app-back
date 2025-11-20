@@ -6,13 +6,11 @@ import { User } from 'src/users/entities/user.model';
 
 @Schema({ timestamps: true })
 export class InvitacionesGrupos extends Document {
+  @Prop({ type: User, required: true })
+  user: User;
 
-    @Prop({ type: User, required: true })
-    user: User;
-
-    @Prop({ type: Group, required: true })
-    group: Group;
-
+  @Prop({ type: Group, required: true })
+  group: Group;
 
   @Prop({
     type: String,
@@ -22,4 +20,5 @@ export class InvitacionesGrupos extends Document {
   status: Status;
 }
 
-export const InvitacionesGruposSchema = SchemaFactory.createForClass(InvitacionesGrupos);
+export const InvitacionesGruposSchema =
+  SchemaFactory.createForClass(InvitacionesGrupos);

@@ -8,7 +8,7 @@ export class CreateComunidadDto {
 
   @IsOptional()
   @IsString()
-    @ApiProperty()
+  @ApiProperty()
   descripcion?: string;
 
   @IsOptional()

@@ -3,19 +3,16 @@ import { IsString, IsOptional } from 'class-validator';
 
 export class CreateGrupoDto {
   @IsString()
-    @ApiProperty()
-  
+  @ApiProperty()
   nombre: string;
 
   @IsOptional()
   @IsString()
-    @ApiProperty()
-  
+  @ApiProperty()
   descripcion?: string;
 
   @IsOptional()
   @IsString()
-    @ApiProperty()
-  
+  @ApiProperty()
   imagen?: string;
 }

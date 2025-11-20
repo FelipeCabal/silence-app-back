@@ -24,7 +24,7 @@ import { CommunityService } from './community.service';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class ComunidadesController {
-  constructor(private readonly communityService: CommunityService) { }
+  constructor(private readonly communityService: CommunityService) {}
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las comunidades' })
@@ -78,7 +78,11 @@ export class ComunidadesController {
   @Delete(':id/members/:userId')
   @ApiOperation({ summary: 'Eliminar miembro de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  @ApiParam({ name: 'userId', type: String, description: 'ID del miembro a eliminar' })
+  @ApiParam({
+    name: 'userId',
+    type: String,
+    description: 'ID del miembro a eliminar',
+  })
   async removeMember(
     @Param('id') communityId: string,
     @Param('userId') userId: string,

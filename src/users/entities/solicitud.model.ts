@@ -11,7 +11,11 @@ export class FriendRequest extends Document {
   @Prop({ type: User, required: true })
   userRecibe: User;
 
-  @Prop({ type: String, enum: Object.values(Status), default: Status.Pendiente })
+  @Prop({
+    type: String,
+    enum: Object.values(Status),
+    default: Status.Pendiente,
+  })
   status: Status;
 
   @Prop({ type: String, ref: 'ChatPrivado', default: null })

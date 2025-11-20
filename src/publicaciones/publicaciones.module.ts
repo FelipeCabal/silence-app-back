@@ -18,18 +18,10 @@ import { RedisModule } from 'src/redis/redis.module';
       },
     ]),
     UsersModule,
-    RedisModule
+    RedisModule,
   ],
   controllers: [ComentariosController, PublicacionesController],
-  providers: [
-    ComentariosService,
-    PublicacionesService,
-    UsersService,
-  ],
-  exports: [
-    MongooseModule,
-    UsersModule,
-    PublicacionesService,
-  ]
+  providers: [ComentariosService, PublicacionesService, UsersService],
+  exports: [MongooseModule, UsersModule, PublicacionesService],
 })
-export class PublicacionesModule { }
+export class PublicacionesModule {}
