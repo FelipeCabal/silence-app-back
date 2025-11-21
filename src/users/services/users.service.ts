@@ -165,7 +165,8 @@ export class UsersService {
     const cached = await this.cacheGet<any>(cacheKey);
     if (cached) return cached;
 
-    const user = await this.userModel.findById(id).select('-password').lean().exec();
+    const user = (await this.userModel.findById(id).select('-password -pubAnonimas -__v').lean());
+
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }

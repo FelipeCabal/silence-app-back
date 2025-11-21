@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Publicacion } from 'src/publicaciones/entities/publicacion.schema';
 import { ComentarioResponseDto } from './comentario-reponse.dto';
 import { Types } from 'mongoose';
+import { User } from 'src/users/entities/user.model';
 
 export class PublicacionResponseDto {
   @ApiProperty({
@@ -9,6 +10,11 @@ export class PublicacionResponseDto {
     example: '64b7f8c2e1d3f2a5b6c7d8e9',
   })
   id: string;
+  @ApiProperty({
+    description: "User who created the post",
+    example: '_id: 64b7f8c2e1d3f2a5b6c7d8e9 , nombre: Jhon Doe , imagen: https://example.com/image.jpg'
+  })
+  owner: User;
 
   @ApiProperty({
     description: 'Descripción de la publicación',
@@ -68,6 +74,7 @@ export class PublicacionResponseDto {
   public static fromModel(model: Publicacion): PublicacionResponseDto {
     const dto = new PublicacionResponseDto();
     dto.id = model.id ?? model._id?.toString();
+    dto.owner = model.owner
     dto.description = model.description;
     dto.imagen = model.imagen ?? null;
     dto.comentarios = (model.comentarios ?? []).map((c) =>
