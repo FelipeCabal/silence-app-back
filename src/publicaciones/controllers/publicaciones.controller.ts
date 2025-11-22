@@ -145,7 +145,7 @@ export class PublicacionesController {
   ) {
     const userId = req.user
     const post = await this.publicacionesService.update(
-      postId, updatePublicacionesDto, userId._id
+      postId, updatePublicacionesDto, userId._id.toString()
     );
 
     if (!post) throw new NotFoundException(`Post with ID ${postId} not found`);
@@ -165,7 +165,7 @@ export class PublicacionesController {
   @UseGuards(AuthGuard)
   async remove(@Param('id') id: string, @Request() req: any) {
     const user = req.user
-    const post = await this.publicacionesService.remove(id, user._id);
+    const post = await this.publicacionesService.remove(id, user._id.toString());
 
     if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
 
