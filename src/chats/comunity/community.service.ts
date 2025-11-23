@@ -16,6 +16,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { UserSchema } from 'src/users/entities/users.schema';
 import { User } from 'src/users/entities/user.model';
 import { Types } from 'mongoose';
+import { CommunitySummaryResponseDto } from '../models/communitySummarylarge';
 
 @Injectable()
 export class CommunityService {
@@ -73,36 +74,37 @@ export class CommunityService {
   }
 
   async findAllByUser(userId: string) {
-    const user = await this.userModel.findById(userId).lean();
-    console.log(user, 'como estaas');
+  const user = await this.userModel.findById(userId).lean();
 
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    const communitySummaries = user.comunidades ?? [];
-    console.log(communitySummaries, 'bro?');
-
-    if (communitySummaries.length == 0) {
-      throw new NotFoundException({
-        err: true,
-        msg: 'el usuario no pertenece a ninguna comunidad',
-      });
-    }
-
-    const communityIds = communitySummaries.map(
-      (c) => new Types.ObjectId(c._id),
-    );
-
-    const comunidades = await this.comunidadesModel
-      .find({ _id: { $in: communityIds } })
-      .lean();
-
-    return comunidades.map((c) => ComunidadResponseDto.fromModel(c));
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
   }
 
-  async findById(id: string, userId: string) {
-  const comunidad = await this.comunidadesModel.findById(id).lean();
+  const communities = user.comunidades ?? [];
+
+  if (communities.length === 0) {
+    throw new NotFoundException({
+      err: true,
+      msg: 'El usuario no pertenece a ninguna comunidad',
+    });
+  }
+
+  const communityIds = communities.map((c) => new Types.ObjectId(c._id));
+
+  const comunidades = await this.comunidadesModel
+    .find({ _id: { $in: communityIds } })
+    .select('_id nombre imagen lastMessage lastMessageDate')
+    .sort({ lastMessageDate: -1 }) 
+    .lean();
+
+  return comunidades.map((c) => CommunitySummaryResponseDto.fromModel(c));
+}
+
+async findById(id: string, userId: string) {
+  const comunidad = await this.comunidadesModel
+    .findById(id)
+    .select('_id nombre imagen lastMessage lastMessageDate miembros.user') 
+    .lean();
 
   if (!comunidad) {
     throw new NotFoundException('Comunidad no encontrada.');
@@ -118,8 +120,9 @@ export class CommunityService {
     );
   }
 
-  return ComunidadResponseDto.fromModel(comunidad);
+  return CommunitySummaryResponseDto.fromModel(comunidad);
 }
+
 
   async addMiembro(comunidadId: string, userId: string) {
   const comunidadObjectId = new Types.ObjectId(comunidadId);
@@ -373,35 +376,39 @@ export class CommunityService {
     };
   }
 
-  async getAllCommunities(
-    search?: string,
-    page: number = 1,
-    limit: number = 10,
-  ) {
-    const filter: any = {};
+async getAllCommunities(
+  search?: string,
+  page: number = 1,
+  limit: number = 10,
+) {
+  const filter: any = {};
 
-    if (search && search.trim()) {
-      filter.nombre = { $regex: search.trim(), $options: 'i' };
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [total, comunidades] = await Promise.all([
-      this.comunidadesModel.countDocuments(filter),
-      this.comunidadesModel
-        .find(filter)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 })
-        .lean(),
-    ]);
-
-    return {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-      results: comunidades.map((c) => ComunidadResponseDto.fromModel(c)),
-    };
+  if (search && search.trim()) {
+    filter.nombre = { $regex: search.trim(), $options: 'i' };
   }
+
+  const skip = (page - 1) * limit;
+
+  const [total, comunidades] = await Promise.all([
+    this.comunidadesModel.countDocuments(filter),
+    this.comunidadesModel
+      .find(filter)
+      .select('_id nombre imagen lastMessage lastMessageDate') 
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+
+  return {
+    total,
+    page,
+    limit,
+    pages: Math.ceil(total / limit),
+    results: comunidades.map((c) =>
+      CommunitySummaryResponseDto.fromModel(c),
+    ),
+  };
+}
+
 }

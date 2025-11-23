@@ -16,6 +16,7 @@ import {
   ApiParam,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { CreateComunidadDto } from '../request/community.dto';
@@ -24,12 +25,13 @@ import { CreateCommunityMessageDto } from '../dto/comunidadesDto/create-communit
 
 @Controller('community')
 @ApiTags('community')
-@UseGuards(AuthGuard)
-@ApiBearerAuth()
+
 export class ComunidadesController {
   constructor(private readonly communityService: CommunityService) {}
 
   @Get()
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({
     summary: 'Obtener comunidades a las que pertenece el usuario autenticado',
   })
@@ -46,8 +48,24 @@ export class ComunidadesController {
   }
 
   @Get('all')
+
   @ApiOperation({
     summary: 'Obtener todas las comunidades con búsqueda y paginación',
+  })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Número de página',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Elementos por página',
+    example: 10,
   })
   async getAllCommunities(
     @Query('search') search?: string,
@@ -68,12 +86,14 @@ export class ComunidadesController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener comunidad por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  async findById(@Param('id') id: string,@Req() req: any) {
-        const userId = req.user._id;
+  async findById(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user._id;
 
-    const data = await this.communityService.findById(id,userId);
+    const data = await this.communityService.findById(id, userId);
     return {
       err: false,
       msg: 'Comunidad obtenida correctamente',
@@ -82,6 +102,8 @@ export class ComunidadesController {
   }
 
   @Post()
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Crear comunidad' })
   @ApiBody({ type: CreateComunidadDto })
   async createCommunity(@Body() dto: CreateComunidadDto, @Request() req: any) {
@@ -95,6 +117,8 @@ export class ComunidadesController {
   }
 
   @Post(':id/members')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Unirse a una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async addMember(@Param('id') communityId: string, @Request() req: any) {
@@ -108,6 +132,8 @@ export class ComunidadesController {
   }
 
   @Delete(':id/members/:userId')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar miembro de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   @ApiParam({
@@ -129,6 +155,8 @@ export class ComunidadesController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async deleteCommunity(@Param('id') id: string, @Request() req: any) {
@@ -142,6 +170,8 @@ export class ComunidadesController {
   }
 
   @Delete(':id/leave')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Salir de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async leaveCommunity(@Param('id') communityId: string, @Req() req: any) {
@@ -160,6 +190,8 @@ export class ComunidadesController {
   }
 
   @Post(':id/messages')
+  @UseGuards(AuthGuard)
+@ApiBearerAuth()
   @ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   @ApiBody({ type: CreateCommunityMessageDto })

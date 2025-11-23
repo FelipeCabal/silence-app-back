@@ -18,6 +18,7 @@ import { Role } from 'src/config/enums/roles.enum';
 
 import { RedisService } from 'src/redis/redis.service';
 import { UserSchema } from 'src/users/entities/users.schema';
+import { GrupoSummaryResponseDto } from '../response/group.response.large';
 
 @Injectable()
 export class GroupService {
@@ -63,29 +64,30 @@ export class GroupService {
   }
 
   async findAll(userId: string) {
-    const user = await this.userModel.findById(userId).lean();
+  const user = await this.userModel.findById(userId).lean();
 
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    const groupSummaries = user.grupos ?? [];
-
-    if (groupSummaries.length === 0) {
-       throw new NotFoundException({
-      err:true,
-      msg:"el usuario no pertenece a ningun grupo"
-    })
-    }
-
-    const groupIds = groupSummaries.map((g) => new Types.ObjectId(g._id));
-
-    const grupos = await this.gruposModel
-      .find({ _id: { $in: groupIds } })
-      .lean();
-
-    return grupos.map((g) => GrupoResponseDto.fromModel(g));
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
   }
+
+  const groupSummaries = user.grupos ?? [];
+
+  if (groupSummaries.length === 0) {
+    throw new NotFoundException({
+      err: true,
+      msg: 'El usuario no pertenece a ningún grupo',
+    });
+  }
+
+  const groupIds = groupSummaries.map((g) => new Types.ObjectId(g._id));
+
+  const grupos = await this.gruposModel
+    .find({ _id: { $in: groupIds } })
+    .lean();
+
+  return grupos.map((g) => GrupoSummaryResponseDto.fromModel(g));
+}
+
 
   async findById(id: string, userId: string) {
     const grupo = await this.gruposModel.findById(id).lean();
