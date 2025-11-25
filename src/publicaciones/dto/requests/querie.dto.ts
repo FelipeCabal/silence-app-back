@@ -7,5 +7,5 @@ export class PostQueries {
 
     @IsBooleanString()
     @IsOptional()
-    esAnonimo?: string;
+    showAnonymous?: string;
 }

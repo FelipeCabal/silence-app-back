@@ -70,7 +70,7 @@ export class PublicacionesController {
    * ENDPOINT to get all posts
    * @returns array with all posts
    */
-  @Get('my/:userId')
+  @Get(':userId')
   @ApiOperation({ summary: 'Get all user posts' })
   @ApiResponse({
     status: 200,
@@ -78,6 +78,7 @@ export class PublicacionesController {
     description: 'The posts have been successfully retrieved.',
   })
   @ApiResponse({ status: 404, description: 'No posts found for the user.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiQuery({
     name: 'limit',
     required: false,
@@ -85,24 +86,25 @@ export class PublicacionesController {
     description: "Número máximo de publicaciones a devolver"
   })
   @ApiQuery({
-    name: 'esAnonimo',
+    name: 'showAnonymous',
     required: false,
     type: Boolean,
     description: 'Si se envía como true, inlcuir publicaciones anónimas'
   })
+  @ApiBearerAuth()
   @UseGuards(AuthGuard)
   async findByUser(
     @Request() req,
     @Param('userId') userId: string,
     @Query() postQueries: PostQueries
   ) {
+    const authenticatedUserId = req.user._id;
 
-    const user = req.user
-    if (!user || !user._id) {
-      throw new HttpException('Usuario no autenticado', HttpStatus.UNAUTHORIZED);
-    }
-
-    return this.publicacionesService.findByUser(userId, postQueries, user._id);
+    return this.publicacionesService.findByUser(
+      userId,
+      postQueries,
+      authenticatedUserId
+    );
   }
 
   /**

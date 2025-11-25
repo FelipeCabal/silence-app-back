@@ -32,7 +32,7 @@ export class PublicacionesService {
         const parts = [
             'post:search',
             postId,
-            q.esAnonimo || false,
+            q.showAnonymous || false,
             (q.limit || 0).toString(),
         ];
         return parts.join(':')
@@ -171,27 +171,40 @@ export class PublicacionesService {
      * @param userId - The ID of the user
      * @returns An array of posts by the user
      */
-    async findByUser(userId: string, postQueries: PostQueries, reqUser: string): Promise<PublicacionResponseDto[]> {
+    async findByUser(
+        userId: string,
+        postQueries: PostQueries,
+        reqUser: string
+    ): Promise<PublicacionResponseDto[]> {
         const cacheKey = this.buildSearchKey(userId, postQueries);
         const cached = await this.cacheGet<any[]>(cacheKey);
-
         if (cached) {
             return cached;
         }
 
-        const includeAnonymous = postQueries.esAnonimo === 'true';
+        // Normalizar el parámetro booleano
+        const includeAnonymous = postQueries.showAnonymous === 'true';
 
-        const query: any = { user: userId };
+        // Verificar permisos ANTES de construir la query
+        const isOwnProfile = reqUser === userId;
 
-        if (includeAnonymous && reqUser != userId) {
-            throw new HttpException("You are not allowed to view anonymous posts from another user", HttpStatus.FORBIDDEN);
+        if (includeAnonymous && !isOwnProfile) {
+            throw new HttpException(
+                "You are not allowed to view anonymous posts from another user",
+                HttpStatus.FORBIDDEN
+            );
         }
 
-        if (includeAnonymous) {
-            query.esAnonimo = true;   // Solo anónimos
-        } else {
-            query.esAnonimo = false;  // Solo públicos (default)
+        // Construir query
+        const query: any = { "owner.userId": userId };
+
+        if (!includeAnonymous) {
+            // Si NO quiere anónimos, solo traer públicos
+            query.esAnonimo = false;
         }
+        // Si includeAnonymous es true y es su perfil, no agregar filtro 
+        // (traerá todos: anónimos y públicos)
+        console.log(query)
 
         const posts = await this.publicacionesModel
             .find(query)
@@ -209,11 +222,8 @@ export class PublicacionesService {
         );
 
         await this.cacheSet(cacheKey, result, this.TTL_COLLECTION_SECONDS);
-
         return result;
     }
-
-
     /**
      * Update a post by its ID
      * @param id - The ID of the post
