@@ -9,13 +9,18 @@ import {
   Request,
   NotFoundException,
   UseGuards,
+  Query,
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PublicacionesService } from '../services/publicaciones.service';
 import { CreatePublicacionDto } from '../dto/requests/create-publicacion.dto';
 import { UpdatePublicacionDto } from '../dto/requests/update-publicacion.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
 import { AuthGuard } from '../../auth/guards/auth.guard';
+import { PostQueries } from '../dto/requests/querie.dto';
 
 @Controller('posts')
 @ApiTags('Posts')
@@ -36,8 +41,9 @@ export class PublicacionesController {
   })
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  create(@Body() createPublicacionesDto: CreatePublicacionDto) {
-    return this.publicacionesService.create(createPublicacionesDto);
+  create(@Body() createPublicacionesDto: CreatePublicacionDto, @Request() req: any) {
+    const user = req.user;
+    return this.publicacionesService.create(createPublicacionesDto, user._id);
   }
 
   /**
@@ -64,7 +70,7 @@ export class PublicacionesController {
    * ENDPOINT to get all posts
    * @returns array with all posts
    */
-  @Get('my')
+  @Get(':userId')
   @ApiOperation({ summary: 'Get all user posts' })
   @ApiResponse({
     status: 200,
@@ -72,16 +78,33 @@ export class PublicacionesController {
     description: 'The posts have been successfully retrieved.',
   })
   @ApiResponse({ status: 404, description: 'No posts found for the user.' })
-  async findByUser(@Request() req: any) {
-    const usuario = req.user;
-    const posts = await this.publicacionesService.findByUser(usuario._id);
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: "Número máximo de publicaciones a devolver"
+  })
+  @ApiQuery({
+    name: 'showAnonymous',
+    required: false,
+    type: Boolean,
+    description: 'Si se envía como true, inlcuir publicaciones anónimas'
+  })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard)
+  async findByUser(
+    @Request() req,
+    @Param('userId') userId: string,
+    @Query() postQueries: PostQueries
+  ) {
+    const authenticatedUserId = req.user._id;
 
-    if (posts.length === 0)
-      throw new NotFoundException(
-        `No posts found for user with ID ${usuario.id}`,
-      );
-
-    return posts;
+    return this.publicacionesService.findByUser(
+      userId,
+      postQueries,
+      authenticatedUserId
+    );
   }
 
   /**
@@ -106,8 +129,8 @@ export class PublicacionesController {
    * @param updatePublicacionesDto update data
    * @returns post updated
    */
-  @Patch(':id')
-  @ApiParam({ name: 'id', description: 'ID of the post to update' })
+  @Patch(':postId')
+  @ApiParam({ name: 'postId', description: 'ID of the post to update' })
   @ApiOperation({ summary: 'Update a post' })
   @ApiResponse({
     status: 200,
@@ -118,15 +141,16 @@ export class PublicacionesController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
   async update(
-    @Param('id') id: string,
+    @Param('postId') postId: string,
     @Body() updatePublicacionesDto: UpdatePublicacionDto,
+    @Request() req: any
   ) {
+    const userId = req.user
     const post = await this.publicacionesService.update(
-      id,
-      updatePublicacionesDto,
+      postId, updatePublicacionesDto, userId._id.toString()
     );
 
-    if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
+    if (!post) throw new NotFoundException(`Post with ID ${postId} not found`);
 
     return post;
   }
@@ -141,8 +165,9 @@ export class PublicacionesController {
   @ApiOperation({ summary: 'Delete a post' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard)
-  async remove(@Param('id') id: string) {
-    const post = await this.publicacionesService.remove(id);
+  async remove(@Param('id') id: string, @Request() req: any) {
+    const user = req.user
+    const post = await this.publicacionesService.remove(id, user._id.toString());
 
     if (!post) throw new NotFoundException(`Post with ID ${id} not found`);
 
