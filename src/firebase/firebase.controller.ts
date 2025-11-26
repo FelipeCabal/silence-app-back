@@ -15,7 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FirebaseService } from './firebase.service';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 @Controller('firebase')
 @ApiTags('firebase')
@@ -24,6 +24,7 @@ export class FirebaseController {
 
     @Post('upload')
     @UseInterceptors(FileInterceptor('image'))
+    @ApiBearerAuth()
     @UseGuards(AuthGuard)
     async uploadImage(
         @UploadedFile(
@@ -48,6 +49,7 @@ export class FirebaseController {
     }
 
     @Delete('delete')
+    @ApiBearerAuth()
     @UseGuards(AuthGuard)
     async deleteImage(@Body('fileName') fileName: string) {
         if (!fileName) {

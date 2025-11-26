@@ -7,6 +7,8 @@ import {
   Delete,
   Request,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,13 +26,13 @@ import { CreateGrupoDto } from '../request/create-group.dto';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class GroupsController {
-  constructor(private readonly groupService: GroupService) { }
+  constructor(private readonly groupService: GroupService) {}
 
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
   @ApiBody({ type: CreateGrupoDto })
   async create(@Body() dto: CreateGrupoDto, @Request() req: any) {
-    const creatorId = req.user.id;
+    const creatorId = req.user._id;
     const data = await this.groupService.create(dto, creatorId);
 
     return {
@@ -40,11 +42,14 @@ export class GroupsController {
     };
   }
 
-
   @Get()
-  @ApiOperation({ summary: 'Obtener todos los grupos' })
-  async findAll() {
-    const data = await this.groupService.findAll();
+  @ApiOperation({
+    summary: 'Obtener los grupos a los que pertenece el usuario autenticado',
+  })
+  async findAll(@Req() req: any) {
+    const userId = req.user?._id;
+    const data = await this.groupService.findAll(userId);
+
     return {
       err: false,
       msg: 'Grupos obtenidos correctamente',
@@ -55,8 +60,10 @@ export class GroupsController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener grupo por ID' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
-  async findById(@Param('id') id: string) {
-    const data = await this.groupService.findById(id);
+  async findById(@Param('id') id: string,@Req() req: any) {
+      const userId = req.user._id;
+
+    const data = await this.groupService.findById(id,userId);
     return {
       err: false,
       msg: 'Grupo obtenido correctamente',
@@ -67,12 +74,104 @@ export class GroupsController {
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar grupo' })
   @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
-  async remove(@Param('id') id: string) {
-    const data = await this.groupService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user._id;
+
+    const data = await this.groupService.remove(id, userId);
+
     return {
       err: false,
       msg: 'Grupo eliminado correctamente',
       data,
+    };
+  }
+
+  @Delete(':id/leave')
+  @ApiOperation({
+    summary:
+      'Salir del grupo (si eres admin se reasigna el rol si hay más miembros)',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'ID del grupo' })
+  async leaveGroup(@Param('id') id: string, @Req() req: any) {
+    const userId = req.user._id;
+
+    const data = await this.groupService.leaveGroup(id, userId);
+    return {
+      err: false,
+      msg: data.message,
+      data,
+    };
+  }
+
+  @Delete(':groupId/members/:memberId')
+  @ApiOperation({
+    summary: 'Eliminar miembro de un grupo (solo administradores)',
+  })
+  @ApiParam({ name: 'groupId', type: String, description: 'ID del grupo' })
+  @ApiParam({
+    name: 'memberId',
+    type: String,
+    description: 'ID del miembro a eliminar',
+  })
+  async removeMember(
+    @Param('groupId') groupId: string,
+    @Param('memberId') memberId: string,
+    @Req() req: any,
+  ) {
+    const requesterId = req.user._id;
+
+    const data = await this.groupService.removeMember(
+      groupId,
+      memberId,
+      requesterId,
+    );
+
+    return {
+      err: false,
+      data,
+    };
+  }
+
+  @Post(':groupId/messages')
+  @ApiOperation({ summary: 'Agregar un mensaje a un grupo' })
+@ApiParam({
+  name: 'groupId',
+  type: String,
+  description: 'ID del grupo al que se enviará el mensaje',
+})
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      message: {
+        type: 'string',
+        example: 'Hola a todos!',
+        description: 'Contenido del mensaje a enviar',
+      },
+    },
+    required: ['message'],
+  },
+})
+  async addMessage(
+    @Param('groupId') groupId: string,
+    @Body('message') message: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user._id;
+
+    if (!message || message.trim() === '') {
+      throw new ForbiddenException('El mensaje no puede estar vacío.');
+    }
+
+    const nuevoMensaje = await this.groupService.addMessage(
+      groupId,
+      userId,
+      message,
+    );
+
+    return {
+      status: 'success',
+      data: nuevoMensaje,
     };
   }
 }
