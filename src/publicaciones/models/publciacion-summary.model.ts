@@ -11,7 +11,7 @@ export class PublicacionModel {
   description: string;
 
   @Prop({ default: null, trim: true })
-  imagen: string | null;
+  imagen: string[];
 
   @Prop({ type: User, default: null })
   owner: User
@@ -32,7 +32,7 @@ export class PublicacionModel {
     const dto = new PublicacionModel();
     dto._id = model.id ?? model._id?.toString();
     dto.description = model.description;
-    dto.imagen = model.imagen ?? null;
+    dto.imagen = model.imagen ?? [];
     dto.cantLikes = model.cantLikes ?? 0;
     dto.cantComentarios = model.cantComentarios ?? 0;
     dto.esAnonimo = model.esAnonimo;

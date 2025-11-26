@@ -24,10 +24,14 @@ export class PublicacionResponseDto {
 
   @ApiProperty({
     description: 'URL de la imagen asociada a la publicación',
-    example: 'https://example.com/image.jpg',
+    example:
+      ['https://example.com/image.jpg',
+        'https://example.com/image2.jpg'
+      ],
+    type: [String],
     nullable: true,
   })
-  imagen: string | null;
+  imagen: string[];
 
   @ApiProperty({
     description: 'Comentarios de la publicación',
@@ -76,7 +80,7 @@ export class PublicacionResponseDto {
     dto.id = model.id ?? model._id?.toString();
     dto.owner = model.owner
     dto.description = model.description;
-    dto.imagen = model.imagen ?? null;
+    dto.imagen = (model.imagen ?? []);
     dto.comentarios = (model.comentarios ?? []).map((c) =>
       ComentarioResponseDto.fromModel(c),
     );

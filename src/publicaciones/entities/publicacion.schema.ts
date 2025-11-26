@@ -8,8 +8,16 @@ export class Publicacion extends Document {
   @Prop({ required: true, trim: true })
   description: string;
 
-  @Prop({ default: null, trim: true })
-  imagen: string;
+  @Prop({
+    type: [String],
+    default: null,
+    validate: {
+      validator: (arr: string[]) => !arr || arr.length <= 5,
+      message: 'No puede subir más de 5 imágenes'
+    },
+    trim: true
+  })
+  imagen: string[];
 
   @Prop({ default: false })
   esAnonimo: boolean;
