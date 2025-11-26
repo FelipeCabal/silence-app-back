@@ -11,6 +11,7 @@ import { ChatsModule } from './chats/chats.module';
 import { LikesModule } from './likes/likes.module';
 import { RedisModule } from './redis/redis.module';
 import { FirebaseModule } from './firebase/firebase.module';
+import { ReportesModule } from './reportes/reportes.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { FirebaseModule } from './firebase/firebase.module';
     AuthModule,
     LikesModule,
     ChatsModule,
-    FirebaseModule
+    FirebaseModule,
+    ReportesModule
   ],
   controllers: [AppController],
   providers: [AppService],
