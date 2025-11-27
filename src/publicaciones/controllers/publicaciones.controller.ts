@@ -70,7 +70,7 @@ export class PublicacionesController {
    * ENDPOINT to get all posts
    * @returns array with all posts
    */
-  @Get(':userId')
+  @Get('user/:userId')
   @ApiOperation({ summary: 'Get all user posts' })
   @ApiResponse({
     status: 200,
