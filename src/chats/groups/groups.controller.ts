@@ -160,6 +160,7 @@ export class GroupsController {
     const userId = req.user._id;
 
     const data = await this.groupService.findById(id, userId);
+
     return {
       err: false,
       msg: 'Grupo obtenido correctamente',
@@ -249,6 +250,26 @@ export class GroupsController {
     description: 'No autorizado - token faltante o inválido',
   })
   @ApiResponse({ status: 404, description: 'Mensaje o recurso no encontrado' })
+  @Post(':groupId/messages')
+  @ApiOperation({ summary: 'Agregar un mensaje a un grupo' })
+  @ApiParam({
+    name: 'groupId',
+    type: String,
+    description: 'ID del grupo al que se enviará el mensaje',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Hola a todos!',
+          description: 'Contenido del mensaje a enviar',
+        },
+      },
+      required: ['message'],
+    },
+  })
   @Post(':groupId/messages')
   @ApiOperation({ summary: 'Agregar un mensaje a un grupo' })
   @ApiParam({

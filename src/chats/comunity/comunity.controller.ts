@@ -189,8 +189,6 @@ export class ComunidadesController {
     description: 'No autorizado - token faltante o inválido',
   })
   @Post()
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear comunidad' })
   @ApiBody({ type: CreateComunidadDto })
   async createCommunity(@Body() dto: CreateComunidadDto, @Request() req: any) {
@@ -204,8 +202,6 @@ export class ComunidadesController {
   }
 
   @Post(':id/members')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Unirse a una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async addMember(@Param('id') communityId: string, @Request() req: any) {
@@ -219,8 +215,6 @@ export class ComunidadesController {
   }
 
   @Delete(':id/members/:userId')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar miembro de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   @ApiParam({
@@ -242,8 +236,6 @@ export class ComunidadesController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async deleteCommunity(@Param('id') id: string, @Request() req: any) {
@@ -252,77 +244,6 @@ export class ComunidadesController {
     return {
       err: false,
       msg: 'Comunidad eliminada correctamente',
-      data,
-    };
-  }
-
-  @Delete(':id/leave')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Salir de una comunidad' })
-  @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  async leaveCommunity(@Param('id') communityId: string, @Req() req: any) {
-    const userId = req.user?._id;
-
-    const result = await this.communityService.leaveCommunity(
-      communityId,
-      userId,
-    );
-
-    return {
-      err: false,
-      msg: result.message,
-      data: null,
-    };
-  }
-
-  @ApiParam({ name: 'id', description: 'ID de la comunidad' })
-  @ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
-  @ApiResponse({
-    status: 201,
-    description: 'Mensaje agregado correctamente a la comunidad',
-    schema: {
-      example: {
-        err: false,
-        msg: 'Mensaje agregado correctamente a la comunidad',
-        data: {
-          _id: '6927cd8c8aab30913b54f3d4',
-          mensaje: 'bebe te amo',
-          remitente: '691bf9c02e5f2fe2ab3bd061',
-          fecha: '2025-11-27T04:11:34.337Z',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Datos inválidos en el cuerpo de la solicitud',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'No autorizado - token faltante o inválido',
-  })
-  @ApiResponse({ status: 404, description: 'Comunidad no encontrada' })
-  @Post(':id/messages')
-  @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Agregar un mensaje a la comunidad' })
-  @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
-  @ApiBody({ type: CreateCommunityMessageDto })
-  async addMessageToCommunity(
-    @Param('id') id: string,
-    @Body() dto: CreateCommunityMessageDto,
-    @Req() req: any,
-  ) {
-    const userId = req.user._id;
-    const data = await this.communityService.addMessage(
-      id,
-      userId,
-      dto.message,
-    );
-    return {
-      err: false,
-      msg: 'Mensaje agregado correctamente a la comunidad',
       data,
     };
   }

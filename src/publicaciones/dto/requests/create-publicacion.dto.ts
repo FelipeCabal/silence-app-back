@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from "class-validator"
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsArray, ArrayMaxSize } from "class-validator"
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePublicacionDto {
@@ -7,11 +7,21 @@ export class CreatePublicacionDto {
     @ApiProperty({ description: 'Contenido de la publicacion', example: 'Este es el contenido de la publicacion' })
     description: string
 
-    @IsString()
+    @IsArray()
+    @IsString({ each: true })
+    @ArrayMaxSize(5, { message: 'No puede subir más de 5 imágenes' })
     @IsOptional()
-    @IsNotEmpty()
-    @ApiProperty({ description: 'URL de la imagen asociada a la publicacion', example: 'http://example.com/imagen.jpg', required: false })
-    imagen?: string
+    @ApiProperty({
+        description: 'URLs de las imágenes asociadas a la publicacion (máximo 5)',
+        example:
+            [
+                'http://example.com/imagen1.jpg',
+                'http://example.com/imagen2.jpg'
+            ],
+        type: [String],
+        required: false
+    })
+    imagen?: string[];
 
     @IsOptional()
     @IsBoolean()
