@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreatePublicacionDto } from './create-publicacion.dto';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsArray, ArrayMaxSize } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdatePublicacionDto extends PartialType(CreatePublicacionDto) {
@@ -14,8 +14,19 @@ export class UpdatePublicacionDto extends PartialType(CreatePublicacionDto) {
     @ApiProperty({ description: 'Indica si la publicacion es anonima', example: true, required: false })
     esAnonimo?: boolean;
 
-    @IsString()
+    @IsArray()
+    @IsString({ each: true })
+    @ArrayMaxSize(5, { message: 'No puede subir más de 5 imágenes' })
     @IsOptional()
-    @ApiProperty({ description: 'URL de la imagen de la publicacion', example: 'https://example.com/imagen.jpg', required: false })
-    imagen?: string;
+    @ApiProperty({
+        description: 'URLs de las imágenes de la publicacion (máximo 5)',
+        example:
+            [
+                'https://example.com/imagen1.jpg',
+                'https://example.com/imagen2.jpg'
+            ],
+        type: [String],
+        required: false
+    })
+    imagen?: string[];
 }
