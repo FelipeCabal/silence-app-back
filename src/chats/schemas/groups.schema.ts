@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Members} from '../models/member.model';
 
 @Schema({ timestamps: true })
@@ -15,6 +15,30 @@ export class Grupos extends Document {
 
   @Prop({ type: [Members], required: true ,default:[]})
   members: Members[];
+
+
+    @Prop()
+    lastMessage?: string;
+      @Prop({ type: Date, default: () => new Date() })
+  lastMessageDate: Date;
+  
+     @Prop({
+      type: [
+        {
+          mensaje: { type: String, required: true },
+          fecha: { type: Date, default: Date.now },
+          remitente: { type: Types.ObjectId, ref: 'User', required: true },
+  
+        },
+      ],
+      default: [],
+    })
+    mensajes: {
+      mensaje: string;
+      fecha: Date;
+      remitente: Types.ObjectId;
+  
+    }[];
 }
 
 export const GruposSchema = SchemaFactory.createForClass(Grupos);

@@ -21,6 +21,7 @@ export class ComunidadResponseDto {
       descripcion: model.descripcion,
       imagen: model.imagen,
       miembros: model.miembros || [],
+      
     };
   }
 }

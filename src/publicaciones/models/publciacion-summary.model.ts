@@ -1,6 +1,7 @@
 import { Prop } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { Publicacion } from '../entities/publicacion.schema';
+import { User } from 'src/users/entities/user.model';
 
 export class PublicacionModel {
   @Prop({ type: Types.ObjectId, auto: true })
@@ -10,10 +11,10 @@ export class PublicacionModel {
   description: string;
 
   @Prop({ default: null, trim: true })
-  imagen: string | null;
+  imagen: string[];
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-  usuario: Types.ObjectId | null;
+  @Prop({ type: User, default: null })
+  owner: User
 
   @Prop({ default: false })
   esAnonimo: boolean;
@@ -31,7 +32,7 @@ export class PublicacionModel {
     const dto = new PublicacionModel();
     dto._id = model.id ?? model._id?.toString();
     dto.description = model.description;
-    dto.imagen = model.imagen ?? null;
+    dto.imagen = model.imagen ?? [];
     dto.cantLikes = model.cantLikes ?? 0;
     dto.cantComentarios = model.cantComentarios ?? 0;
     dto.esAnonimo = model.esAnonimo;

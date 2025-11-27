@@ -33,15 +33,16 @@ export class UserSchema extends Document {
     ShowLikes: boolean;
 
     @Prop({
-        type: [{
-            _id: String,
-            descripcion: String,
-            imagen: String
-        },
-        ],
+        type: [PublicacionModel],
         default: [],
     })
     publicaciones: Array<Record<string, any>>;
+
+    @Prop({
+        type: [PublicacionModel],
+        default: []
+    })
+    pubAnonimas: Array<Record<string, any>>;
 
     @Prop({
         type: [{
