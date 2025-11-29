@@ -42,6 +42,10 @@ export class NotificationsGateway
 
       try {
         const user = this.jwtService.verify(token.replace('Bearer ', ''));
+        if(!user.id) {
+          return next(new Error('Unauthorized: invalid token'));
+        }
+        
         socket.data.user = user;
         next();
       } catch {
@@ -83,10 +87,18 @@ export class NotificationsGateway
 
   handleSendNotification(userId: string, notification: any) {
     const sockets = this.userSockets.get(userId);
-    if (!sockets) return;
+    if (!sockets) {
+      this.logger.log(`User ${userId} is not connected. Notification not sent.`);
+      return;
+    }
+
+    
 
     sockets.forEach((socketId) => {
       this.server.to(socketId).emit('notification', notification);
+      this.logger.log(`Sent notification to user ${userId} on socket ${socketId}`);
+
+
     });
   }
 }

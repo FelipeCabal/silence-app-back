@@ -23,7 +23,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get user notifications', description: 'Retrieve notifications for the authenticated user, sorted by creation date and read status.' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of notifications retrieved successfully.' })
   findForUser(@Request() req: any) {
-    return this.notificationsService.getNotificationsForUser(req.user.id);
+    return this.notificationsService.getNotificationsForUser(req.user._id);
   }
 
   @Patch(':id/read')
@@ -31,7 +31,7 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Notification marked as read successfully.' })
   @ApiParam({ name: 'id', description: 'The ID of the notification to mark as read.' })
   markAsRead(@Param('id') notificationId: string, @Request() req: any) {
-    return this.notificationsService.markAsRead(req.user.id, notificationId);
+    return this.notificationsService.markAsRead(req.user._id, notificationId);
   }
 
   @Delete(':id')

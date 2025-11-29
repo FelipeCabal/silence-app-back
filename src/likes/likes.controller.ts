@@ -20,7 +20,7 @@ export class LikesController {
     async getUserLikes(
         @Request() req: any
     ) {
-        return this.likesService.getUserLikes(req.user.id);
+        return this.likesService.getUserLikes(req.user._id);
     }
 
     @Post('like/:postId')
@@ -32,7 +32,7 @@ export class LikesController {
         @Param('postId') postId: string,
         @Request() req: any
     ) {
-        return this.likesService.likePost(postId, req.user.id);
+        return this.likesService.likePost(postId, req.user._id);
     }
 
     @Post('unlike/:postId')
@@ -44,6 +44,6 @@ export class LikesController {
         @Param('postId') postId: string,
         @Request() req: any
     ) {
-        return this.likesService.unlikePost(postId, req.user.id);
+        return this.likesService.unlikePost(postId, req.user._id);
     }
 }
