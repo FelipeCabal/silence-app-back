@@ -248,7 +248,7 @@ export class UsersService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
     const u: any = user;
-    const safe = { ...u, password: u.password };
+    const safe = { ...u, password: u.password, id: u._id.toString() };
     this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
 
     this.cacheSet(`user:${u._id}`, { ...safe, password: undefined }, this.TTL_USER_SECONDS);
