@@ -20,6 +20,13 @@ export class PostListener {
   @OnEvent('post.liked')
   handlePostLikedEvent(payload: PostEventPayload) {
     this.logger.log(`Post liked event received for postId: ${payload.post.id}, userId: ${payload.sender._id}`);
+
+     this.notificationsService.createNotification({
+      type: NotificationType.LIKE,
+      message: `${payload.sender.nombre} le gustó tu publicación.`,
+      receiver: payload.post.owner,
+      sender: payload.sender,
+    })
   }
 
   @OnEvent('post.commented')

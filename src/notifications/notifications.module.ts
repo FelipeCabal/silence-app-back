@@ -8,6 +8,10 @@ import {
 } from './models/notification.model';
 import { userModelSchema, UserSchema } from 'src/users/entities/users.schema';
 import { PostListener } from './listeners/post.listener';
+import { NotificationsController } from './controllers/notifications.controller';
+import { AuthModule } from 'src/auth/auth.module';
+import { UsersService } from 'src/users/services/users.service';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -21,7 +25,14 @@ import { PostListener } from './listeners/post.listener';
         schema: userModelSchema,
       },
     ]),
+
+    AuthModule,
+    UsersModule
   ],
   providers: [NotificationsService, NotificationsGateway, PostListener],
+  controllers: [
+    NotificationsController
+  ],
+  exports: [],
 })
 export class NotificationsModule {}

@@ -24,6 +24,9 @@ export class NotificationModel extends Document {
   @Prop({ required: true, enum: NotificationType })
   type: NotificationType;
 
+  @Prop({ required: false, default: false })
+  read?: boolean;
+
   createdAt?: Date;
 }
 
