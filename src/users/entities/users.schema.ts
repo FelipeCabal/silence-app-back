@@ -1,9 +1,10 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document } from "mongoose";
+import { Document, Types } from "mongoose";
 import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
 
 @Schema({ collection: 'users', timestamps: true })
 export class UserSchema extends Document {
+    _id: Types.ObjectId;
 
     @Prop({ required: true })
     nombre: string;

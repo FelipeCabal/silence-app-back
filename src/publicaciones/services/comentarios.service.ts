@@ -7,22 +7,37 @@ import { CreateComentarioDto } from '../dto/requests/comentarios/create-comentar
 import { UpdateComentarioDto } from '../dto/requests/comentarios/update-comentario.dto';
 import { PublicacionResponseDto } from '../dto/responses/publicacion-response.dto';
 import { RedisService } from 'src/redis/redis.service';
+import { UserSchema } from 'src/users/entities/users.schema';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PostEventPayload } from 'src/notifications/listeners/post.listener';
 
 @Injectable()
 export class ComentariosService {
   constructor(
     @InjectModel(Publicacion.name)
     private publicacionesModel: Model<Publicacion>,
+    @InjectModel(UserSchema.name)
+    private usersModel: Model<UserSchema>,
     private readonly redisService: RedisService,
-  ) { }
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Create a new comment
    * @param data - The data to create a new comment
    * @returns The created comment
    */
-  async createComentario(publicacionId: string, data: CreateComentarioDto) {
+  async createComentario(
+    publicacionId: string,
+    userID: string,
+    data: CreateComentarioDto,
+  ) {
     const publicacion = await this.publicacionesModel.findById(publicacionId);
+    const user = await this.usersModel.findById(userID);
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con id ${userID} no encontrado`);
+    }
 
     if (!publicacion)
       throw new NotFoundException(
@@ -31,7 +46,11 @@ export class ComentariosService {
 
     const comentario: Comentario = {
       _id: new Types.ObjectId(),
-      usuario: null,
+      usuario: {
+        _id: user._id,
+        nombre: user.nombre,
+        imagen: user.imagen,
+      },
       comentario: data.comentario,
       createdAt: new Date(),
     };
@@ -41,6 +60,13 @@ export class ComentariosService {
 
     await publicacion.save();
     await this.redisService.client.del(`publicacion:${publicacionId}`);
+
+    const payload: PostEventPayload = {
+      post: PublicacionResponseDto.fromModel(publicacion),
+      sender: user,
+    };
+
+    this.eventEmitter.emit('post.commented',payload);
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -81,7 +107,9 @@ export class ComentariosService {
     });
 
     await publicacion.save();
-    await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
+    await this.redisService.client.del(
+      `publicacion:${publicacion._id.toString()}`,
+    );
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -107,7 +135,9 @@ export class ComentariosService {
     publicacion.cantComentarios = publicacion.comentarios.length;
 
     await publicacion.save();
-    await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
+    await this.redisService.client.del(
+      `publicacion:${publicacion._id.toString()}`,
+    );
 
     return { deleted: true };
   }

@@ -5,12 +5,16 @@ import { Publicacion } from "src/publicaciones/entities/publicacion.schema";
 import { PublicacionModel } from "src/publicaciones/models/publciacion-summary.model";
 import { UserSchema } from "src/users/entities/users.schema";
 import { RedisService } from "src/redis/redis.service";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { PostEventPayload } from "src/notifications/listeners/post.listener";
+import { PublicacionResponseDto } from "src/publicaciones/dto/responses/publicacion-response.dto";
 
 export class LikesService {
     constructor(
         @InjectModel(UserSchema.name) private readonly userModel: Model<UserSchema>,
         @InjectModel(Publicacion.name) private readonly publicacionModel: Model<Publicacion>,
         private readonly redisService: RedisService,
+        private readonly emitter: EventEmitter2,
     ) { }
 
     async getUserLikes(userId: string) {
@@ -60,6 +64,13 @@ export class LikesService {
 
         user.likes.push(publicacionSummary as any);
         await user.save();
+
+        const eventPayload: PostEventPayload = {
+            post: PublicacionResponseDto.fromModel(publicacion),
+            sender: user,
+        }
+
+        this.emitter.emit('post.liked', eventPayload);
 
         await this.redisService.client.del(`publicacion:${publicacion._id.toString()}`);
         await this.redisService.client.del('publicaciones:all');

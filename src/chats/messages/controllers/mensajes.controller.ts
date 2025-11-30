@@ -35,7 +35,7 @@ export class MensajesController {
     @Body() createMessageDto: CreateMessageDto,
     @Req() req: any,
   ) {
-    const userId = req.user.id;
+    const userId = req.user._id;
     return await this.mensajesService.createMessage(createMessageDto, userId);
   }
 
@@ -59,7 +59,7 @@ export class MensajesController {
     @Param('chatType') chatType: string,
     @Req() req: any,
   ) {
-    const userId = req.user.id;
+    const userId = req.user._id;
     return await this.mensajesService.clearChat(chatId, userId, chatType);
   }
 }

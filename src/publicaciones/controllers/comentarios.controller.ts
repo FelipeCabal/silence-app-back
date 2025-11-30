@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
@@ -27,8 +28,9 @@ export class ComentariosController {
   async createComment(
     @Param('postId') postId: string,
     @Body() body: CreateComentarioDto,
+    @Request() req: any,
   ) {
-    return await this.comentariosService.createComentario(postId, body);
+    return await this.comentariosService.createComentario(postId, req.user._id, body);
   }
 
   @Patch(':commentId')
