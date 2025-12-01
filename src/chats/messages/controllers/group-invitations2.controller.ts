@@ -9,13 +9,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { ApiOperation, ApiTags, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiParam,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { GroupInvitationsService } from '../services/group-invitations.service2';
 
 @Controller('group-invitations')
 @ApiTags('Group Invitations')
-
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class InvitationsGroupController {
@@ -23,7 +28,33 @@ export class InvitationsGroupController {
     private readonly groupInvitationsService: GroupInvitationsService,
   ) {}
 
-
+  @ApiResponse({
+    status: 201,
+    description: 'Invitación creada correctamente',
+    schema: {
+      example: {
+        _id: '6927b6e7095fa94953140567',
+        user: {
+          _id: '691d579dd871d869fdc986e4',
+          nombre: 'Leopoldo',
+          imagen:
+            'https://storage.googleapis.com/gossipweb-37abf.appspot.com/profiles/691d579dd871d869fdc986e4/1763606019805_upload_1763606016852.jpg',
+        },
+        group: {
+          _id: '691c0b947b21eb32451b3894',
+          nombre: 'Grupo Prueba',
+          imagen: 'string',
+        },
+        status: 'P',
+        createdAt: '2025-11-27T02:26:47.625Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos en la solicitud' })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado - token faltante o inválido',
+  })
   @Post(':groupId/send/:receiverId')
   @ApiOperation({ summary: 'Create a group invitation' })
   @ApiParam({ name: 'groupId', description: 'ID of the group' })
@@ -91,6 +122,32 @@ export class InvitationsGroupController {
     await this.groupInvitationsService.reject(invitationId, userId);
   }
 
+  @ApiResponse({
+    status: 200,
+    description: 'Invitación encontrada correctamente',
+    schema: {
+      example: {
+        _id: '691c0d9d7b21eb32451b38a4',
+        user: {
+          _id: '691bfb8d2e5f2fe2ab3bd065',
+          nombre: 'Andres',
+          imagen: null,
+        },
+        group: {
+          _id: '691c0b947b21eb32451b3894',
+          nombre: 'Grupo Prueba',
+          imagen: 'string',
+        },
+        status: 'A',
+        createdAt: '2025-11-18T06:09:33.314Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Invitación no encontrada' })
+  @ApiResponse({
+    status: 401,
+    description: 'No autorizado - token faltante o inválido',
+  })
   @Get(':invitationId')
   @ApiOperation({ summary: 'Get a specific invitation by ID' })
   @ApiParam({
