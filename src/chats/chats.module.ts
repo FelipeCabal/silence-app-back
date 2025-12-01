@@ -22,16 +22,22 @@ import { GroupsController } from './groups/groups.controller';
 import { ChatPrivateService } from './chat-private/chat-private.service';
 import { FriendRequestSchema } from 'src/users/entities/solicitud.model';
 import { FriendRequest } from 'src/users/entities/solicitud.schema';
+import { UserSchema, userModelSchema } from 'src/users/entities/users.schema';
 import { UsersModule } from 'src/users/users.module';
 import { InvitationsGroupController } from './messages/controllers/group-invitations2.controller';
 import { GroupInvitationsService } from './messages/services/group-invitations.service2';
-
+import { ChatsGateway } from './gateway/chats.gateway';
+import { ChatAuthorizationService } from './services/chat-authorization.service';
 import { RedisModule } from 'src/redis/redis.module';
 import { UsersService } from 'src/users/services/users.service';
+import { JwtModule } from '@nestjs/jwt';
+import { jwtConstants } from 'src/config/constants/jwt.constants';
+import { MessagesController } from './controllers/messages.controller';
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
+    JwtModule.register(jwtConstants),
     MongooseModule.forFeature([
       { name: Comunidades.name, schema: ComunidadesSchema },
       { name: Grupos.name, schema: GruposSchema },
@@ -40,6 +46,7 @@ import { UsersService } from 'src/users/services/users.service';
       { name: Mensajes.name, schema: MensajesSchema },
       { name: MiembrosComunidades.name, schema: MiembrosComunidadesSchema },
       { name: FriendRequest.name, schema: FriendRequestSchema },
+      { name: UserSchema.name, schema: userModelSchema },
     ]),
     RedisModule,
   ],
@@ -48,18 +55,22 @@ import { UsersService } from 'src/users/services/users.service';
     ComunidadesController,
     GroupsController,
     InvitationsGroupController,
+    MessagesController,
   ],
   providers: [
     ChatPrivateService,
     GroupService,
     CommunityService,
     GroupInvitationsService,
+    ChatAuthorizationService,
+    ChatsGateway,
     UsersService,
   ],
   exports: [
     ChatPrivateService,
     GroupService,
     CommunityService,
+    ChatsGateway,
   ],
 })
 export class ChatsModule {}
