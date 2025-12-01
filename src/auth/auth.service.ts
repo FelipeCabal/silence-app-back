@@ -21,7 +21,7 @@ export class AuthService {
             throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED)
         }
         const payload = {
-            id: user.id,
+            id: user._id.toString(),
             email: user.email,
             name: user.nombre
         };
