@@ -125,61 +125,78 @@ async findById(id: string, userId: string) {
 
 
   async addMiembro(comunidadId: string, userId: string) {
-  const comunidadObjectId = new Types.ObjectId(comunidadId);
-  const userObjectId = new Types.ObjectId(userId);
+    try {
+      const comunidadObjectId = new Types.ObjectId(comunidadId);
+      const userObjectId = new Types.ObjectId(userId);
 
-  const yaMiembro = await this.comunidadesModel.findOne({
-    _id: comunidadObjectId,
-    'miembros.user._id': userObjectId,
-  });
+      const yaMiembro = await this.comunidadesModel.findOne({
+        _id: comunidadObjectId,
+        'miembros.user._id': userObjectId,
+      });
 
-  if (yaMiembro) {
-    throw new ConflictException('Ya es miembro de esta comunidad.');
-  }
+      if (yaMiembro) {
+        throw new ConflictException('Ya es miembro de esta comunidad.');
+      }
 
-  const comunidad = await this.comunidadesModel.findById(comunidadObjectId).lean();
-  if (!comunidad) {
-    throw new NotFoundException('Comunidad no encontrada.');
-  }
+      const comunidad = await this.comunidadesModel.findById(comunidadObjectId).lean();
+      if (!comunidad) {
+        throw new NotFoundException('Comunidad no encontrada.');
+      }
 
-  const user = await this.userModel.findById(userObjectId).lean();
-  if (!user) {
-    throw new NotFoundException('Usuario no encontrado');
-  }
+      const user = await this.userModel
+        .findById(userObjectId)
+        .select('_id nombre imagen')
+        .lean();
+      
+      if (!user) {
+        throw new NotFoundException('Usuario no encontrado');
+      }
 
-  const nuevoMiembro = {
-    user: {
-      _id: userObjectId,
-      nombre: user.nombre,
-      avatar: user.imagen ?? null,
-    },
-    rol: Role.Member,
-  };
-
-  const result = await this.comunidadesModel.updateOne(
-    { _id: comunidadObjectId },
-    { $push: { miembros: nuevoMiembro } },
-  );
-
-  if (result.modifiedCount === 0) {
-    throw new NotFoundException('No se pudo agregar el miembro a la comunidad.');
-  }
-
-  // 6. Agregar comunidad al usuario con id + nombre
-  await this.userModel.updateOne(
-    { _id: userObjectId },
-    {
-      $addToSet: {
-        comunidades: {
-          _id: comunidadObjectId,
-          nombre: comunidad.nombre, 
+      const nuevoMiembro = {
+        user: {
+          _id: userObjectId,
+          nombre: user.nombre,
+          avatar: user.imagen ?? null,
         },
-      },
-    },
-  );
+        rol: Role.Member,
+      };
 
-  return { message: 'Miembro agregado exitosamente.' };
-}
+      const result = await this.comunidadesModel.updateOne(
+        { _id: comunidadObjectId },
+        { $push: { miembros: nuevoMiembro } },
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new NotFoundException('No se pudo agregar el miembro a la comunidad.');
+      }
+
+      // Agregar comunidad al usuario con id + nombre
+      await this.userModel.updateOne(
+        { _id: userObjectId },
+        {
+          $addToSet: {
+            comunidades: {
+              _id: comunidadObjectId,
+              nombre: comunidad.nombre,
+            },
+          },
+        },
+      );
+
+      // Invalidar caché
+      try {
+        await this.redisService.client.del(`community:${comunidadId}:members`);
+        await this.redisService.client.del(`user:${userId}:communities`);
+      } catch (err) {
+        console.warn('Redis no disponible para invalidar caché:', err.message);
+      }
+
+      return { message: 'Miembro agregado exitosamente.' };
+    } catch (error) {
+      console.error('Error en addMiembro:', error);
+      throw error;
+    }
+  }
 
 
   async removeMember(
