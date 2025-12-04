@@ -189,6 +189,8 @@ export class ComunidadesController {
     description: 'No autorizado - token faltante o inválido',
   })
   @Post()
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear comunidad' })
   @ApiBody({ type: CreateComunidadDto })
   async createCommunity(@Body() dto: CreateComunidadDto, @Request() req: any) {
@@ -202,6 +204,8 @@ export class ComunidadesController {
   }
 
   @Post(':id/members')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Unirse a una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async addMember(@Param('id') communityId: string, @Request() req: any) {
@@ -215,6 +219,8 @@ export class ComunidadesController {
   }
 
   @Delete(':id/members/:userId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar miembro de una comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   @ApiParam({
@@ -236,6 +242,8 @@ export class ComunidadesController {
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar comunidad' })
   @ApiParam({ name: 'id', type: String, description: 'ID de la comunidad' })
   async deleteCommunity(@Param('id') id: string, @Request() req: any) {
