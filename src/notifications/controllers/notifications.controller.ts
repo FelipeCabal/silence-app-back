@@ -10,10 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications.service';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 @Controller('notifications')
+@ApiBearerAuth()
 @UseGuards(AuthGuard)
 @ApiTags('Notifications')
 export class NotificationsController {
