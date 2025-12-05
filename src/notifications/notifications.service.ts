@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationModel } from './models/notification.model';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -61,30 +61,37 @@ export class NotificationsService {
    * @returns A promise that resolves to an array of notification objects for the specified user.
    */
   async getNotificationsForUser(userId: string) {
-    // Normalizar userId a string
-    const userIdStr = userId.toString();
-    const cacheKey = `notifications:user:${userIdStr}`;
+    const cacheKey = `notifications:user:${userId}`;
 
     // Intentar obtener del caché
     try {
       const cached = await this.redisService.client.get(cacheKey);
       if (cached) {
-        console.log(`✅ Notificaciones obtenidas del caché para usuario ${userIdStr}`);
+        console.log(`✅ Notificaciones obtenidas del caché para usuario ${userId}`);
         return JSON.parse(cached);
       }
     } catch (err) {
       console.warn('Redis no disponible para obtener caché de notificaciones:', err.message);
     }
 
-    // Si no está en caché, consultar base de datos
-    console.log(`📊 Consultando notificaciones en BD para usuario ${userIdStr}`);
+    // Si no está en caché, consultar base de datos con ObjectId
+    console.log(`📊 Consultando notificaciones en BD para usuario ${userId}`);
+    
+    let objectId: Types.ObjectId;
+    try {
+      objectId = new Types.ObjectId(userId);
+    } catch (error) {
+      console.error(`❌ Invalid userId format: ${userId}`, error);
+      return [];
+    }
+
     const notifications = await this.notificationModel
-      .find({ 'receiver._id': userIdStr })
+      .find({ 'receiver._id': objectId })
       .sort({ createdAt: -1, read: 1 })
       .exec();
 
     const result = notifications.map((notification) => notification.toObject());
-    console.log(`📨 Encontradas ${result.length} notificaciones para usuario ${userIdStr}`);
+    console.log(`📨 Encontradas ${result.length} notificaciones para usuario ${userId}`);
 
     // Guardar en caché
     try {
@@ -94,7 +101,7 @@ export class NotificationsService {
         'EX',
         this.TTL_NOTIFICATIONS,
       );
-      console.log(`💾 Notificaciones guardadas en caché para usuario ${userIdStr}`);
+      console.log(`💾 Notificaciones guardadas en caché para usuario ${userId}`);
     } catch (err) {
       console.warn('Redis no disponible para guardar caché de notificaciones:', err.message);
     }
