@@ -32,7 +32,6 @@ export class ChatPrivateController {
   @ApiOperation({ summary: 'Crear chat privado entre dos usuarios' })
   @ApiBody({ type: CreateChatPrivadoDto })
   async create(@Body() dto: CreateChatPrivadoDto) {
-    console.log("entro")
     const data = await this.chatPrivateService.create(dto);
     return {
       err: false,

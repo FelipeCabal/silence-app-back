@@ -4,6 +4,7 @@ import {
   ConflictException,
   InternalServerErrorException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -225,4 +226,28 @@ export class ChatPrivateService {
     await this.redisService.client.del(`private-chat:${id}`);
     return { deleted: true };
   }
+
+
+ async findExistingChatBetweenUsers(
+  userA: string,
+  userB: string,
+): Promise<ChatPrivadoResponseDto | null> {
+  if (!Types.ObjectId.isValid(userA) || !Types.ObjectId.isValid(userB)) {
+    throw new BadRequestException('Invalid user IDs.');
+  }
+
+  const userAObjectId = new Types.ObjectId(userA);
+  const userBObjectId = new Types.ObjectId(userB);
+
+  const existingChat = await this.chatPrivadoModel
+    .findOne({
+      'miembros.user._id': { $all: [userAObjectId, userBObjectId] },
+    })
+    .lean();
+
+  if (!existingChat) return null;
+
+  return ChatPrivadoResponseDto.fromModel(existingChat);
+}
+
 }
