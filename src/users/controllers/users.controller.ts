@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Request, UseGuards, 
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { UserQueries } from '../dto/querie.dto';
 
@@ -14,6 +14,10 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   @Get('/others')
+  @ApiOperation({ summary: 'Obtener todos los usuarios (excepto amigos)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Límite de resultados', example: 10 })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar por nombre', example: 'Juan' })
+  @ApiQuery({ name: 'country', required: false, type: String, description: 'Filtrar por país', example: 'Colombia' })
   async findAllUsers(
     @Request() req: any,
     @Query() userQueries: UserQueries,
