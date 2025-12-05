@@ -209,15 +209,14 @@ export class SolicitudesAmistadService {
   async acceptRequest(requestId: string, userId: string) {
     const request = await this.findOneReq(requestId);
 
-    if (!request) throw new HttpException('Request not found', 404);
-    console.log(request, 'bro?');
+    if (!request) throw new HttpException('Request not found', HttpStatus.NOT_FOUND);
     if (request.status == Status.Aceptada) {
       throw new NotFoundException('la solicitud ya fue aceptada');
     }
     if (request.userRecibe._id !== userId)
-      throw new HttpException("You're not authorized", 401);
+      throw new HttpException("You're not authorized", HttpStatus.UNAUTHORIZED);
     if (request.status !== Status.Pendiente)
-      throw new HttpException('Already processed', 400);
+      throw new HttpException('Already processed',HttpStatus.BAD_REQUEST);
 
     const senderId =
       typeof request.userEnvia === 'object'
@@ -344,7 +343,7 @@ console.log(chat,"NO?")
 
   async findUserRequests(userId: string) {
     const cacheKey = `friendreq:user:${userId}`;
-    const cached = await this.cacheGet<any[]>(cacheKey);
+    const cached = await this.cacheGet<FriendRequest[]>(cacheKey);
     if (cached) return cached;
 
     const list = await this.requestModel
@@ -359,7 +358,7 @@ console.log(chat,"NO?")
 
   async findAcceptedFriendships(userId: string) {
     const cacheKey = `friendreq:accepted:${userId}`;
-    const cached = await this.cacheGet<any[]>(cacheKey);
+    const cached = await this.cacheGet<FriendRequest[]>(cacheKey);
     if (cached) return cached as any;
 
     const list = await this.requestModel

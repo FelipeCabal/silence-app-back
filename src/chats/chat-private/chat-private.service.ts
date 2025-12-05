@@ -232,9 +232,8 @@ export class ChatPrivateService {
   userA: string,
   userB: string,
 ): Promise<ChatPrivadoResponseDto | null> {
-console.log(userA,2,userB,5)
   if (!Types.ObjectId.isValid(userA) || !Types.ObjectId.isValid(userB)) {
-    throw new BadRequestException('IDs de usuario inválidos.');
+    throw new BadRequestException('Invalid user IDs.');
   }
 
   const userAObjectId = new Types.ObjectId(userA);

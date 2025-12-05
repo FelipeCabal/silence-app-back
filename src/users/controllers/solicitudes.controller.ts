@@ -102,18 +102,9 @@ export class SolicitudesController {
 
   @Patch('update/:requestId')
   @ApiOperation({
-    summary: 'Actualizar aceptar el estado de una solicitud',
+    summary: 'Actualizar el estado de una solicitud',
   })
   @ApiParam({ name: 'requestId', type: String, required: true })
-  @ApiBody({
-    description: 'Body necesario para actualizar el estado',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string' },
-      },
-    },
-  })
   @ApiResponse({
     status: 200,
     description: 'Solicitud actualizada correctamente',
