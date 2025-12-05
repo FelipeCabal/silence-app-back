@@ -8,6 +8,7 @@ import {
   Patch,
   Request,
   UseGuards,
+  Header,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -21,6 +22,10 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header('Pragma', 'no-cache')
+  @Header('Expires', '0')
+  @Header('Surrogate-Control', 'no-store')
   @ApiOperation({ summary: 'Get user notifications', description: 'Retrieve notifications for the authenticated user, sorted by creation date and read status.' })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of notifications retrieved successfully.' })
   findForUser(@Request() req: any) {
