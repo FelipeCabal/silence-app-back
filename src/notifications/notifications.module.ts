@@ -12,6 +12,7 @@ import { NotificationsController } from './controllers/notifications.controller'
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersService } from 'src/users/services/users.service';
 import { UsersModule } from 'src/users/users.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { UsersModule } from 'src/users/users.module';
     ]),
 
     AuthModule,
-    UsersModule
+    UsersModule,
+    RedisModule,
   ],
   providers: [NotificationsService, NotificationsGateway, PostListener],
   controllers: [
