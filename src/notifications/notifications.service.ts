@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationModel } from './models/notification.model';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UserSchema } from 'src/users/entities/users.schema';
+import { RedisService } from 'src/redis/redis.service';
 
 
 @Injectable()
@@ -15,7 +16,10 @@ export class NotificationsService {
     private notificationsGateway: NotificationsGateway,
     @InjectModel(UserSchema.name)
     private usersModel: Model<UserSchema>,
+    private readonly redisService: RedisService,
   ) {}
+
+  private readonly TTL_NOTIFICATIONS = 300; // 5 minutos
 
   /**
    * Creates a new notification and saves it to the database.
@@ -34,9 +38,18 @@ export class NotificationsService {
 
     await notification.save();
 
+    // Invalidar caché de notificaciones del receptor (normalizar a string)
+    const receiverIdStr = receiver._id.toString();
+    try {
+      await this.redisService.client.del(`notifications:user:${receiverIdStr}`);
+      console.log(`🗑️ Caché de notificaciones invalidado para usuario ${receiverIdStr}`);
+    } catch (err) {
+      console.warn('Redis no disponible para invalidar caché de notificaciones:', err.message);
+    }
+
     // Enviar notificación en tiempo real si el usuario está conectado
     this.notificationsGateway.handleSendNotification(
-      receiver._id.toString(),
+      receiverIdStr,
       notification.toObject(),
     );
   }
@@ -48,12 +61,52 @@ export class NotificationsService {
    * @returns A promise that resolves to an array of notification objects for the specified user.
    */
   async getNotificationsForUser(userId: string) {
+    const cacheKey = `notifications:user:${userId}`;
+
+    // Intentar obtener del caché
+    try {
+      const cached = await this.redisService.client.get(cacheKey);
+      if (cached) {
+        console.log(`✅ Notificaciones obtenidas del caché para usuario ${userId}`);
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn('Redis no disponible para obtener caché de notificaciones:', err.message);
+    }
+
+    // Si no está en caché, consultar base de datos con ObjectId
+    console.log(`📊 Consultando notificaciones en BD para usuario ${userId}`);
+    
+    let objectId: Types.ObjectId;
+    try {
+      objectId = new Types.ObjectId(userId);
+    } catch (error) {
+      console.error(`❌ Invalid userId format: ${userId}`, error);
+      return [];
+    }
+
     const notifications = await this.notificationModel
-      .find({ 'receiver._id': userId })
+      .find({ 'receiver._id': objectId })
       .sort({ createdAt: -1, read: 1 })
       .exec();
 
-    return notifications.map((notification) => notification.toObject());
+    const result = notifications.map((notification) => notification.toObject());
+    console.log(`📨 Encontradas ${result.length} notificaciones para usuario ${userId}`);
+
+    // Guardar en caché
+    try {
+      await this.redisService.client.set(
+        cacheKey,
+        JSON.stringify(result),
+        'EX',
+        this.TTL_NOTIFICATIONS,
+      );
+      console.log(`💾 Notificaciones guardadas en caché para usuario ${userId}`);
+    } catch (err) {
+      console.warn('Redis no disponible para guardar caché de notificaciones:', err.message);
+    }
+
+    return result;
   }
 
   /**
@@ -63,20 +116,31 @@ export class NotificationsService {
    * @returns A promise that resolves to the updated notification object.
    */
   async markAsRead(userId:string, notificationId: string) {
+    const userIdStr = userId.toString();
     const notification = await this.notificationModel.findById(notificationId);
     if (!notification) {
       throw new NotFoundException('Notification not found');
     }
 
-    if(notification.receiver._id.toString() !== userId) {
+    if(notification.receiver._id.toString() !== userIdStr) {
       throw new ForbiddenException('You are not allowed to mark this notification as read');
     }
 
-    return this.notificationModel.findByIdAndUpdate(
+    const updated = await this.notificationModel.findByIdAndUpdate(
       notificationId,
       { read: true },
       { new: true },
     );
+
+    // Invalidar caché de notificaciones del usuario
+    try {
+      await this.redisService.client.del(`notifications:user:${userIdStr}`);
+      console.log(`🗑️ Caché invalidado al marcar como leída para usuario ${userIdStr}`);
+    } catch (err) {
+      console.warn('Redis no disponible para invalidar caché de notificaciones:', err.message);
+    }
+
+    return updated;
   }
 
   async deleteNotification(notificationId: string) {
@@ -85,6 +149,16 @@ export class NotificationsService {
       throw new NotFoundException('Notification not found');
     }
 
+    const userIdStr = notification.receiver._id.toString();
+
     await this.notificationModel.findByIdAndDelete(notificationId);
+
+    // Invalidar caché de notificaciones del usuario
+    try {
+      await this.redisService.client.del(`notifications:user:${userIdStr}`);
+      console.log(`🗑️ Caché invalidado al eliminar notificación para usuario ${userIdStr}`);
+    } catch (err) {
+      console.warn('Redis no disponible para invalidar caché de notificaciones:', err.message);
+    }
   }
 }
