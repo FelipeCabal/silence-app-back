@@ -136,7 +136,7 @@ export class SolicitudesAmistadService {
 
         const requests = await this.requestModel
             .find({
-                userRecibe: userId,
+                userRecibe: userId.toString(),
                 status: Status.Pendiente
             })
             .populate({
