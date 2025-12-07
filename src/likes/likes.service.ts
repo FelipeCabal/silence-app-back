@@ -62,6 +62,20 @@ export class LikesService {
         publicacion.cantLikes = publicacion.likes.length;
         await publicacion.save();
 
+        // Add owner info to the summary if not anonymous
+        if (!publicacion.esAnonimo && publicacion.owner) {
+            const ownerId = typeof publicacion.owner === 'string' ? publicacion.owner : publicacion.owner.toString();
+            const owner = await this.userModel.findById(ownerId).select('_id nombre imagen').lean();
+            if (owner) {
+                publicacionSummary.owner = {
+                    _id: owner._id.toString(),
+                    nombre: owner.nombre,
+                    imagen: owner.imagen || null,
+                    userId: owner._id.toString()
+                } as any;
+            }
+        }
+
         user.likes.push(publicacionSummary as any);
         await user.save();
 
