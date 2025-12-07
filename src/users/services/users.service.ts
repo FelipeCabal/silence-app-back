@@ -16,6 +16,9 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { RedisService } from '../../redis/redis.service';
 import { Publicacion } from 'src/publicaciones/entities/publicacion.schema';
+import { Comunidades } from 'src/chats/schemas/community.schema';
+import { Grupos } from 'src/chats/schemas/groups.schema';
+import { ChatPrivado } from 'src/chats/schemas/chats.schema';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +29,13 @@ export class UsersService {
     private readonly redisService: RedisService,
     @InjectModel(Publicacion.name)
     private readonly publicacionModel: Model<Publicacion>,
+    @InjectModel(Comunidades.name)
+    private readonly comunidadesModel: Model<Comunidades>,
+        @InjectModel(Grupos.name)
+    private readonly gruposModel: Model<Grupos>,
+
+        @InjectModel(ChatPrivado.name)
+    private readonly chatPrivateModel: Model<ChatPrivado>,
   ) {}
 
   private readonly TTL_USER_SECONDS = 600;
@@ -260,6 +270,25 @@ export class UsersService {
       },
     );
 
+    console.log(id, typeof(id),updated.nombre)
+    await this.publicacionModel.updateMany(
+  {
+    'comentarios.usuario._id': id,
+  },
+  {
+    $set: {
+      'comentarios.$[elem].usuario.nombre': updated.nombre,
+      'comentarios.$[elem].usuario.imagen': updated.imagen ?? null,
+      'comentarios.$[elem].usuario.userId': updated._id.toString(),
+    },
+  },
+  {
+    arrayFilters: [
+      { 'elem.usuario._id': id},
+    ],
+  },
+);
+
     await this.userModel.updateMany(
       {
         'likes.owner._id': id,
@@ -272,6 +301,54 @@ export class UsersService {
         },
       },
     );
+
+
+    await this.comunidadesModel.updateMany(
+  { 'miembros.user._id': new Types.ObjectId(id)  },
+  {
+    $set: {
+      'miembros.$[elem].user.nombre': updated.nombre,
+      'miembros.$[elem].user.avatar': updated.imagen ?? null,
+    },
+  },
+  {
+    arrayFilters: [
+      { 'elem.user._id': new Types.ObjectId(id) }
+    ],
+  },
+);
+
+await this.chatPrivateModel.updateMany(
+  { 'miembros.user._id': new Types.ObjectId(id) },
+  {
+    $set: {
+      'miembros.$[elem].user.nombre': updated.nombre,
+      'miembros.$[elem].user.imagen': updated.imagen ?? null,
+    },
+  },
+  {
+    arrayFilters: [
+      { 'elem.user._id': new Types.ObjectId(id) }
+    ],
+  },
+);
+
+
+await this.gruposModel.updateMany(
+  { 'members.user._id': new Types.ObjectId(id) },
+  {
+    $set: {
+      'members.$[elem].user.nombre': updated.nombre,
+      'members.$[elem].user.avatar': updated.imagen ?? null,
+    },
+  },
+  {
+    arrayFilters: [
+      { 'elem.user._id': new Types.ObjectId(id) }
+    ],
+  },
+);
+
 
     const safe = { ...updated, _id: updated._id.toString() };
 

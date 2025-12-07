@@ -9,6 +9,9 @@ import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema'
 import { ChatsModule } from 'src/chats/chats.module';
 import { RedisModule } from '../redis/redis.module';
 import { Publicacion, PublicacionSchema } from 'src/publicaciones/entities/publicacion.schema';
+import { Comunidades, ComunidadesSchema } from 'src/chats/schemas/community.schema';
+import { Grupos, GruposSchema } from 'src/chats/schemas/groups.schema';
+import { ChatPrivado, ChatPrivadoSchema } from 'src/chats/schemas/chats.schema';
 
 @Module({
   imports: [
@@ -24,6 +27,18 @@ import { Publicacion, PublicacionSchema } from 'src/publicaciones/entities/publi
        {
         name: Publicacion.name,
         schema: PublicacionSchema
+      },
+       {
+        name: Comunidades.name,
+        schema: ComunidadesSchema
+      },
+       {
+        name: Grupos.name,
+        schema: GruposSchema
+      },
+       {
+        name: ChatPrivado.name,
+        schema: ChatPrivadoSchema
       }
     ]),
     forwardRef(() => ChatsModule),
