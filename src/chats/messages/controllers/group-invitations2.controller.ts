@@ -72,6 +72,41 @@ export class InvitationsGroupController {
     });
   }
 
+  @Get('group/:groupId/pending')
+  @ApiOperation({ summary: 'Obtener lista de usuarios con invitaciones pendientes para el grupo' })
+  @ApiParam({ name: 'groupId', description: 'ID del grupo' })
+  @ApiResponse({
+    status: 200,
+    description: 'Invitaciones pendientes obtenidas correctamente',
+    schema: {
+      example: {
+        err: false,
+        msg: 'Invitaciones pendientes obtenidas correctamente',
+        data: [
+          {
+            _id: '692cb4547794f827ad9bf549',
+            nombre: 'esteban',
+            imagen: null
+          }
+        ]
+      }
+    }
+  })
+  async getPendingInvitations(
+    @Param('groupId') groupId: string,
+    @Request() req: any
+  ) {
+    const data = await this.groupInvitationsService.getPendingInvitationsByGroup(
+      groupId,
+      req.user._id
+    );
+    return {
+      err: false,
+      msg: 'Invitaciones pendientes obtenidas correctamente',
+      data
+    };
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all invitations for the authenticated user' })
   @ApiResponse({ status: 404, description: 'No invitations found.' })

@@ -170,4 +170,30 @@ export class GroupInvitationsService {
     });
     return invitations.map((inv) => InvitacionSimpleModel.fromEntity(inv));
   }
+
+  /**
+   * Get list of users with pending invitations for a specific group
+   */
+  async getPendingInvitationsByGroup(groupId: string, userId: string) {
+    // Verify user has access to the group
+    const group = await this.groupService.findById(groupId, userId);
+    if (!group) {
+      throw new NotFoundException('Grupo no encontrado');
+    }
+
+    // Get all pending invitations for this group
+    const invitations = await this.groupInvitationModel
+      .find({
+        'group._id': groupId,
+        status: Status.Pendiente
+      })
+      .lean();
+
+    // Return only user info (_id, nombre, imagen)
+    return invitations.map((inv: any) => ({
+      _id: inv.user._id.toString ? inv.user._id.toString() : inv.user._id,
+      nombre: inv.user.nombre,
+      imagen: inv.user.imagen || null
+    }));
+  }
 }

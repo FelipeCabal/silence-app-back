@@ -329,4 +329,31 @@ export class GroupService {
       fecha: new Date(),
     };
   }
+
+  /**
+   * Get list of members in a group
+   */
+  async getMembers(groupId: string, userId: string) {
+    const grupo = await this.gruposModel.findById(groupId).lean();
+
+    if (!grupo) {
+      throw new NotFoundException('Grupo no encontrado.');
+    }
+
+    // Verify user is member of the group
+    const isMember = grupo.members.some(
+      (m: any) => m.user._id.toString() === userId
+    );
+
+    if (!isMember) {
+      throw new ForbiddenException('No tienes acceso a este grupo.');
+    }
+
+    // Return only user info (_id, nombre, imagen)
+    return grupo.members.map((m: any) => ({
+      _id: m.user._id.toString ? m.user._id.toString() : m.user._id,
+      nombre: m.user.nombre,
+      imagen: m.user.avatar || m.user.imagen || null
+    }));
+  }
 }
