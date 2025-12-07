@@ -56,8 +56,6 @@ export class ReportesService {
       motivo,
     });
 
-    console.log(existe, 'bro?');
-
     if (existe) {
       throw new Error(
         'Ya existe un reporte pendiente para esta usuario por el mismo motivo.',
