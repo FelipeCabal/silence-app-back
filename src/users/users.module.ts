@@ -8,6 +8,7 @@ import { userModelSchema, UserSchema } from './entities/users.schema';
 import { FriendRequest, FriendRequestSchema } from './entities/solicitud.schema';
 import { ChatsModule } from 'src/chats/chats.module';
 import { RedisModule } from '../redis/redis.module';
+import { Publicacion, PublicacionSchema } from 'src/publicaciones/entities/publicacion.schema';
 
 @Module({
   imports: [
@@ -19,6 +20,10 @@ import { RedisModule } from '../redis/redis.module';
       {
         name: FriendRequest.name,
         schema: FriendRequestSchema
+      },
+       {
+        name: Publicacion.name,
+        schema: PublicacionSchema
       }
     ]),
     forwardRef(() => ChatsModule),

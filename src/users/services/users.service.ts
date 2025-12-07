@@ -1,4 +1,10 @@
-import { forwardRef, HttpException, HttpStatus, Inject, Injectable, } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
@@ -6,9 +12,10 @@ import { SALT_ROUNDS } from 'src/config/constants/bycript.constants';
 import { SolicitudesAmistadService } from './solicitudesAmistad.service';
 import { UserQueries } from '../dto/querie.dto';
 import { UserSchema } from '../entities/users.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { RedisService } from '../../redis/redis.service';
+import { Publicacion } from 'src/publicaciones/entities/publicacion.schema';
 
 @Injectable()
 export class UsersService {
@@ -17,7 +24,9 @@ export class UsersService {
     @Inject(forwardRef(() => SolicitudesAmistadService))
     private readonly solicitudAmistadServices: SolicitudesAmistadService,
     private readonly redisService: RedisService,
-  ) { }
+    @InjectModel(Publicacion.name)
+    private readonly publicacionModel: Model<Publicacion>,
+  ) {}
 
   private readonly TTL_USER_SECONDS = 600;
   private readonly TTL_COLLECTION_SECONDS = 600;
@@ -36,9 +45,7 @@ export class UsersService {
   private async cacheSet(key: string, value: any, ttl: number) {
     try {
       await this.redisService.client.set(key, JSON.stringify(value), 'EX', ttl);
-    } catch (err) {
-
-    }
+    } catch (err) {}
   }
 
   /** Get & parse JSON cache */
@@ -56,13 +63,13 @@ export class UsersService {
       if (keys.length) {
         await this.redisService.client.del(...keys);
       }
-    } catch { }
+    } catch {}
   }
 
   /**
    * Función para crear un usuario
-   * @param createUser 
-   * @returns 
+   * @param createUser
+   * @returns
    */
   async createUser(createUser: CreateUserDto) {
     const exists = await this.userModel.findOne({ email: createUser.email });
@@ -76,14 +83,18 @@ export class UsersService {
     const safe = { ...saved.toObject(), password: undefined };
 
     this.cacheSet(`user:${saved._id}`, safe, this.TTL_USER_SECONDS);
-    this.cacheSet(`user:email:${saved.email}`, { ...saved.toObject() }, this.TTL_USER_SECONDS);
+    this.cacheSet(
+      `user:email:${saved.email}`,
+      { ...saved.toObject() },
+      this.TTL_USER_SECONDS,
+    );
     return saved;
   }
 
   /**
    * Función para buscar a todos los usuarios usando queries / filtros
-   * @param userId 
-   * @param userQueries 
+   * @param userId
+   * @param userQueries
    * @returns lista de usuarios que cumplen con los criterios de búsqueda
    */
   async findAllUsers(userId: string, userQueries: UserQueries): Promise<any[]> {
@@ -114,11 +125,12 @@ export class UsersService {
 
     if (!users || users.length === 0) {
       throw new HttpException(
-        'No se encontraron usuarios que coincidan con la búsqueda.', HttpStatus.NOT_FOUND
+        'No se encontraron usuarios que coincidan con la búsqueda.',
+        HttpStatus.NOT_FOUND,
       );
     }
 
-    const result = users.map(user => ({
+    const result = users.map((user) => ({
       id: user._id.toString(),
       nombre: user.nombre,
       descripcion: user.descripcion,
@@ -126,7 +138,7 @@ export class UsersService {
       email: user.email,
       fechaNto: user.fechaNto,
       sexo: user.sexo,
-      pais: user.pais
+      pais: user.pais,
     }));
 
     this.cacheSet(cacheKey, result, this.TTL_COLLECTION_SECONDS);
@@ -138,12 +150,13 @@ export class UsersService {
     const cached = await this.cacheGet<any[]>(cacheKey);
     if (cached) return cached;
 
-    const acceptedRequests = await this.solicitudAmistadServices.findAcceptedFriendships(userId);
+    const acceptedRequests =
+      await this.solicitudAmistadServices.findAcceptedFriendships(userId);
     if (!acceptedRequests.length) {
       this.cacheSet(cacheKey, [], this.TTL_COLLECTION_SECONDS);
       return [];
     }
-    const amigos = acceptedRequests.map(request => {
+    const amigos = acceptedRequests.map((request) => {
       const isSender = request.userEnvia._id.toString() === userId;
       const amigo: any = isSender ? request.userRecibe : request.userEnvia;
       const safe: any = { ...amigo };
@@ -156,8 +169,8 @@ export class UsersService {
   }
 
   /**
-   * Función para buscar sólo un usuario 
-   * @param id 
+   * Función para buscar sólo un usuario
+   * @param id
    * @returns Usuario
    */
   async findOneUser(id: string) {
@@ -165,7 +178,10 @@ export class UsersService {
     const cached = await this.cacheGet<any>(cacheKey);
     if (cached) return cached;
 
-    const user = (await this.userModel.findById(id).select('-password -pubAnonimas -__v').lean());
+    const user = await this.userModel
+      .findById(id)
+      .select('-password -pubAnonimas -__v')
+      .lean();
 
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -176,8 +192,14 @@ export class UsersService {
       const likesWithOwner = await Promise.all(
         user.likes.map(async (like: any) => {
           if (!like.esAnonimo && like.owner) {
-            const ownerId = typeof like.owner === 'string' ? like.owner : like.owner._id || like.owner;
-            const owner = await this.userModel.findById(ownerId).select('_id nombre imagen').lean();
+            const ownerId =
+              typeof like.owner === 'string'
+                ? like.owner
+                : like.owner._id || like.owner;
+            const owner = await this.userModel
+              .findById(ownerId)
+              .select('_id nombre imagen')
+              .lean();
             if (owner) {
               return {
                 ...like,
@@ -185,13 +207,13 @@ export class UsersService {
                   _id: owner._id.toString(),
                   nombre: owner.nombre,
                   imagen: owner.imagen || null,
-                  userId: owner._id.toString()
-                }
+                  userId: owner._id.toString(),
+                },
               };
             }
           }
           return like;
-        })
+        }),
       );
       user.likes = likesWithOwner;
     }
@@ -203,8 +225,8 @@ export class UsersService {
 
   /**
    * Función para actualizar un usuario
-   * @param id 
-   * @param updateUser 
+   * @param id
+   * @param updateUser
    * @returns usuario actualizado.
    */
   async update(id: string, updateUser: UpdateUserDto) {
@@ -218,10 +240,38 @@ export class UsersService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    const updated = await this.userModel.findByIdAndUpdate(id, updateUser, { new: true }).lean();
+    const updated = await this.userModel
+      .findByIdAndUpdate(id, updateUser, { new: true })
+      .lean();
     if (!updated) {
       throw new HttpException("User hasn't been updated", HttpStatus.CONFLICT);
     }
+
+    await this.publicacionModel.updateMany(
+      {
+        'owner._id': new Types.ObjectId(id),
+      },
+      {
+        $set: {
+          'owner.nombre': updated.nombre,
+          'owner.imagen': updated.imagen ?? null,
+          'owner.userId': updated._id.toString(),
+        },
+      },
+    );
+
+    await this.userModel.updateMany(
+      {
+        'likes.owner._id': id,
+      },
+      {
+        $set: {
+          'likes.$.owner.nombre': updated.nombre,
+          'likes.$.owner.imagen': updated.imagen ?? null,
+          'likes.$.owner.userId': updated._id.toString(),
+        },
+      },
+    );
 
     const safe = { ...updated, _id: updated._id.toString() };
 
@@ -242,7 +292,7 @@ export class UsersService {
 
   /**
    * Función para eliminar un usuario
-   * @param id 
+   * @param id
    * @returns usuario eliminado
    */
   async remove(id: string) {
@@ -260,7 +310,7 @@ export class UsersService {
 
   /**
    * Encuentra un usuario por su Email
-   * @param email 
+   * @param email
    * @returns user
    */
   async findByEmail(email: string) {
@@ -277,15 +327,19 @@ export class UsersService {
     const safe = { ...u, password: u.password, id: u._id.toString() };
     this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
 
-    this.cacheSet(`user:${u._id}`, { ...safe, password: undefined }, this.TTL_USER_SECONDS);
+    this.cacheSet(
+      `user:${u._id}`,
+      { ...safe, password: undefined },
+      this.TTL_USER_SECONDS,
+    );
     return safe;
   }
 
   /**
- * Verifica si un usuario existe sin cargar el documento completo
- * @param id - ID del usuario
- * @returns true si existe, false si no
- */
+   * Verifica si un usuario existe sin cargar el documento completo
+   * @param id - ID del usuario
+   * @returns true si existe, false si no
+   */
   async userExists(id: string): Promise<boolean> {
     try {
       const count = await this.userModel.countDocuments({ _id: id }).exec();
@@ -294,5 +348,4 @@ export class UsersService {
       return false;
     }
   }
-
 }

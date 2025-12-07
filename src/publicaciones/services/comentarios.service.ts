@@ -62,12 +62,24 @@ export class ComentariosService {
     await publicacion.save();
     await this.redisService.client.del(`publicacion:${publicacionId}`);
 
+    await this.usersModel.updateMany(
+      {
+        'likes._id': publicacionId,
+        _id: { $ne: userID },
+      },
+      {
+        $set: {
+          'likes.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
+
     const payload: PostEventPayload = {
       post: PublicacionResponseDto.fromModel(publicacion),
       sender: user,
     };
 
-    this.eventEmitter.emit('post.commented',payload);
+    this.eventEmitter.emit('post.commented', payload);
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -140,6 +152,16 @@ export class ComentariosService {
       `publicacion:${publicacion._id.toString()}`,
     );
 
+   await this.usersModel.updateMany(
+    {
+      'likes._id': publicacion._id.toString(),
+    },
+    {
+      $set: {
+        'likes.$.cantComentarios': publicacion.cantComentarios,
+      },
+    },
+  );
     return { deleted: true };
   }
 }
