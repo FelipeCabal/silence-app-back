@@ -47,9 +47,10 @@ export class ComentariosService {
     const comentario: Comentario = {
       _id: new Types.ObjectId(),
       usuario: {
-        _id: user._id,
+        _id: user._id.toString(),
         nombre: user.nombre,
-        imagen: user.imagen,
+        imagen: user.imagen || null,
+        userId: user._id.toString(),
       },
       comentario: data.comentario,
       createdAt: new Date(),
