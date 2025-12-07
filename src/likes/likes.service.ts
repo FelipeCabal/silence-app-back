@@ -64,7 +64,9 @@ export class LikesService {
 
         // Add owner info to the summary if not anonymous
         if (!publicacion.esAnonimo && publicacion.owner) {
-            const ownerId = typeof publicacion.owner === 'string' ? publicacion.owner : publicacion.owner.toString();
+            const ownerId = typeof publicacion.owner === 'object' && publicacion.owner._id 
+                ? publicacion.owner._id.toString() 
+                : publicacion.owner.toString();
             const owner = await this.userModel.findById(ownerId).select('_id nombre imagen').lean();
             if (owner) {
                 publicacionSummary.owner = {
