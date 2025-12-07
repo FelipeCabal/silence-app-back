@@ -112,7 +112,15 @@ export class ChatPrivateService {
       throw new ForbiddenException('No tienes acceso a este chat');
     }
 
-    return ChatPrivadoResponseDto.fromModel(chat);
+    // Find the other user (not the logged user) - handle both string and ObjectId
+    const otherUser = chat.miembros.find(
+      (m: any) => {
+        const memberId = m.user._id.toString ? m.user._id.toString() : m.user._id;
+        return memberId !== userId;
+      }
+    )?.user;
+
+    return ChatPrivadoResponseDto.fromModel(chat, otherUser);
   }
 
   async findAllByUser(userId: string): Promise<ChatPrivadoResponseDto[]> {
@@ -132,7 +140,17 @@ export class ChatPrivateService {
       .sort({ updatedAt: -1 })
       .lean();
 
-    const chatDtos = chats.map((chat) => ChatPrivadoResponseDto.fromModel(chat));
+    const chatDtos = chats.map((chat) => {
+      // Find the other user (not the logged user) - handle both string and ObjectId
+      const otherUser = chat.miembros.find(
+        (m: any) => {
+          const memberId = m.user._id.toString ? m.user._id.toString() : m.user._id;
+          return memberId !== userId;
+        }
+      )?.user;
+
+      return ChatPrivadoResponseDto.fromModel(chat, otherUser);
+    });
 
     try {
       await this.redisService.client.set(cacheKey, JSON.stringify(chatDtos), 'EX', 3600);
