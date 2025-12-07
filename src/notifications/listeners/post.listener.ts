@@ -3,12 +3,12 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { NotificationsService } from '../notifications.service';
 import { NotificationType } from '../models/notification.model';
 import { PublicacionResponseDto } from 'src/publicaciones/dto/responses/publicacion-response.dto';
-import { User } from 'src/users/entities/user.model';
+import { UserSchema } from 'src/users/entities/users.schema';
 
 
 export class PostEventPayload {
   post: PublicacionResponseDto;
-  sender: User
+  sender: UserSchema
 }
 
 @Injectable()
@@ -21,11 +21,18 @@ export class PostListener {
   handlePostLikedEvent(payload: PostEventPayload) {
     this.logger.log(`Post liked event received for postId: ${payload.post.id}, userId: ${payload.sender._id}`);
 
+    const senderUser = {
+      _id: payload.sender._id.toString(),
+      nombre: payload.sender.nombre,
+      imagen: payload.sender.imagen || null,
+      userId: payload.sender._id.toString()
+    };
+
      this.notificationsService.createNotification({
       type: NotificationType.LIKE,
       message: `${payload.sender.nombre} le gustó tu publicación.`,
       receiver: payload.post.owner,
-      sender: payload.sender,
+      sender: senderUser,
     })
   }
 
@@ -33,11 +40,18 @@ export class PostListener {
   handlePostCommentedEvent(payload: PostEventPayload) {
     this.logger.log(`Post commented event received for postId: ${payload.post.id}, userId: ${payload.sender._id}`);
 
+    const senderUser = {
+      _id: payload.sender._id.toString(),
+      nombre: payload.sender.nombre,
+      imagen: payload.sender.imagen || null,
+      userId: payload.sender._id.toString()
+    };
+
     this.notificationsService.createNotification({
       type: NotificationType.COMMENT,
       message: `${payload.sender.nombre} comentó en tu publicación.`,
       receiver: payload.post.owner,
-      sender: payload.sender,
+      sender: senderUser,
     })
   }
 }
