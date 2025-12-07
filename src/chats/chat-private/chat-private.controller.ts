@@ -78,7 +78,7 @@ export class ChatPrivateController {
     };
   }
 
-  @Post(':id/mensajes')
+  @Post(':id/message')
 @ApiOperation({ summary: 'Agregar un mensaje al chat privado' })
 @ApiParam({ name: 'id', type: String, description: 'ID del chat privado' })
 @ApiBody({ type: CreateMessageDto })

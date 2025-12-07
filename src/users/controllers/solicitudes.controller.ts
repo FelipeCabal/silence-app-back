@@ -100,7 +100,7 @@ export class SolicitudesController {
     return this.solicitudesAmistadService.findAcceptedFriendships(req.user._id);
   }
 
-  @Patch('update/:requestId')
+  @Patch('activate/:requestId')
   @ApiOperation({
     summary: 'Actualizar el estado de una solicitud',
   })
@@ -113,7 +113,7 @@ export class SolicitudesController {
     status: 404,
     description: 'Solicitud no encontrada',
   })
-  async updateRequestStatus(
+  async activateRequestStatus(
     @Param('requestId') requestId: string,
     @Request() req: any,
   ) {
