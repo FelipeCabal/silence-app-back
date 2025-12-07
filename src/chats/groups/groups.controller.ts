@@ -63,6 +63,38 @@ export class GroupsController {
     status: 401,
     description: 'No autorizado - token faltante o inválido',
   })
+  @Get(':groupId/members')
+  @ApiOperation({ summary: 'Obtener lista de miembros del grupo' })
+  @ApiParam({ name: 'groupId', description: 'ID del grupo' })
+  @ApiResponse({
+    status: 200,
+    description: 'Miembros obtenidos correctamente',
+    schema: {
+      example: {
+        err: false,
+        msg: 'Miembros obtenidos correctamente',
+        data: [
+          {
+            _id: '691d579dd871d869fdc986e4',
+            nombre: 'Leopoldo',
+            imagen: 'https://example.com/image.jpg'
+          }
+        ]
+      }
+    }
+  })
+  async getMembers(
+    @Param('groupId') groupId: string,
+    @Request() req: any
+  ) {
+    const data = await this.groupService.getMembers(groupId, req.user._id);
+    return {
+      err: false,
+      msg: 'Miembros obtenidos correctamente',
+      data
+    };
+  }
+
   @Post()
   @ApiOperation({ summary: 'Crear grupo' })
   @ApiBody({ type: CreateGrupoDto })
