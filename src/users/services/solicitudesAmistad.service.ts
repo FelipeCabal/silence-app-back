@@ -74,46 +74,26 @@ export class SolicitudesAmistadService {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    async findAllReceiveRequest(userId: string) {
-        const exists = await this.usersService.userExists(userId);
-        if (!exists) {
-            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
-        }
+    const requestExisting = await this.requestModel.findOne({
+      $or: [
+        {
+          userEnvia: userSendId,
+          userRecibe: userReceiveId,
+          status: Status.Pendiente,
+        },
+        {
+          userEnvia: userReceiveId,
+          userRecibe: userSendId,
+          status: Status.Pendiente,
+        },
+      ],
+    });
 
-        const cacheKey = `friendreq:received:${userId}`;
-        const cached = await this.cacheGet<any[]>(cacheKey);
-        if (cached) return cached;
-
-        const requests = await this.requestModel
-            .find({
-                userRecibe: userId.toString(),
-                status: Status.Pendiente
-            })
-            .populate({
-                path: 'userEnvia',
-                select: '_id nombre imagen descripcion email'
-            })
-            .select('_id userEnvia status createdAt')
-            .lean()
-            .exec();
-
-        const result = requests.map(req => {
-            const sender = req.userEnvia as any;
-
-            return {
-                id: req._id.toString(),
-                status: req.status,
-                sender: {
-                    id: sender._id ? sender._id.toString() : sender.toString(),
-                    nombre: sender.nombre || '',
-                    imagen: sender.imagen || null,
-                    descripcion: sender.descripcion || '',
-                    email: sender.email || ''
-                }
-            };
-        });
-        this.cacheSet(cacheKey, result, this.TTL_REQUEST_SECONDS);
-        return result;
+    if (requestExisting) {
+      throw new HttpException(
+        'ya enviaste la solicitud de amistad',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const friendRequest = new this.requestModel({
