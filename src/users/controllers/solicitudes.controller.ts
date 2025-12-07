@@ -100,7 +100,7 @@ export class SolicitudesController {
     return this.solicitudesAmistadService.findAcceptedFriendships(req.user._id);
   }
 
-  @Patch('activate/:requestId')
+  @Patch('/:requestId/accept')
   @ApiOperation({
     summary: 'Actualizar el estado de una solicitud',
   })
@@ -123,7 +123,7 @@ export class SolicitudesController {
     );
   }
 
-  @Delete(':requestId')
+  @Delete(':requestId/reject')
   @ApiOperation({
     summary: 'Eliminar una solicitud de amistad',
   })
