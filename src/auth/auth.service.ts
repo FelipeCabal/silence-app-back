@@ -54,6 +54,7 @@ export class AuthService {
             return JSON.parse(cached);
         }
 
+        // findOneUser already populates the owner in likes
         const user = await this.UsersService.findOneUser(id);
 
         const safeUser: any = user ? { ...user } : user;

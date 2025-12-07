@@ -170,6 +170,32 @@ export class UsersService {
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
+
+    // Populate owner in likes array for non-anonymous publications
+    if (user.likes && user.likes.length > 0) {
+      const likesWithOwner = await Promise.all(
+        user.likes.map(async (like: any) => {
+          if (!like.esAnonimo && like.owner) {
+            const ownerId = typeof like.owner === 'string' ? like.owner : like.owner._id || like.owner;
+            const owner = await this.userModel.findById(ownerId).select('_id nombre imagen').lean();
+            if (owner) {
+              return {
+                ...like,
+                owner: {
+                  _id: owner._id.toString(),
+                  nombre: owner.nombre,
+                  imagen: owner.imagen || null,
+                  userId: owner._id.toString()
+                }
+              };
+            }
+          }
+          return like;
+        })
+      );
+      user.likes = likesWithOwner;
+    }
+
     const safe = { ...user, _id: user._id.toString() };
     this.cacheSet(cacheKey, safe, this.TTL_USER_SECONDS);
     return safe;
