@@ -161,7 +161,7 @@ export class GroupService {
 
     const newMember = {
       user: {
-        _id: userObjectId,
+        _id: userObjectId.toString(),
         nombre: user.nombre,
         avatar: user.imagen ?? null,
       },
