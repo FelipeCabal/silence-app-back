@@ -112,6 +112,8 @@ export class PublicacionesService {
 
         // 3) Invalidar cache
         await this.redisService.client.del('publicaciones:all');
+        await this.redisService.client.del(`user:${userId}`);
+        await this.redisService.client.del(`user:email:${user.email}`);
 
         return PublicacionResponseDto.fromModel(createdPost)
     }
