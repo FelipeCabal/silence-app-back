@@ -94,7 +94,6 @@ export class LikesService {
 
     this.emitter.emit('post.liked', eventPayload);
 
-    console.log(postId,"ffff")
       await this.userModel.updateMany(
     { 'publicaciones.id': new Types.ObjectId(postId)  },
     {
@@ -131,17 +130,28 @@ export class LikesService {
     await this.redisService.client.del(`user:${userId}`);
     await this.redisService.client.del(`profile:${userId}`);
     await this.redisService.client.del(`user:email:${user.email}`);
-
- const refreshedUser = await this.userModel.findById(userId)
-    .select('_id nombre imagen publicaciones pubAnonimas likes email')
-    .lean();
-
-  await this.redisService.client.set(
-    `publicacion:${publicacion.id.toString()}`,
+    
+      await this.redisService.client.set(
+    `publicacion:${postId}`,
     JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
     'EX',
     6000,
   );
+
+
+  const refreshedAllPosts = await this.publicacionModel.find()
+    .sort({ createdAt: -1 })
+    .lean();
+  await this.redisService.client.set(
+    'publicaciones:all',
+    JSON.stringify(refreshedAllPosts),
+    'EX',
+    6000,
+  );
+
+   const refreshedUser = await this.userModel.findById(userId)
+    .select('_id nombre imagen publicaciones pubAnonimas likes email')
+    .lean();
 
   await this.redisService.client.set(
     `user:${userId}`,

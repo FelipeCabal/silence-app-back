@@ -119,6 +119,8 @@ export class PublicacionesService {
     await this.redisService.client.del('publicaciones:all');
     await this.redisService.client.del(`user:${userId}`);
     await this.redisService.client.del(`user:email:${user.email}`);
+    await this.redisService.client.del(`profile:${userId}`);
+
 
     return PublicacionResponseDto.fromModel(createdPost);
   }
@@ -129,6 +131,7 @@ export class PublicacionesService {
    */
   async findAll(): Promise<PublicacionResponseDto[]> {
     try {
+
       // Obtener posts públicos (con usuario)
       const publicPosts = await this.publicacionesModel
         .find({ esAnonimo: false })
