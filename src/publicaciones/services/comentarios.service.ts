@@ -98,17 +98,31 @@ export class ComentariosService {
     await this.redisService.client.del(`profile:${userID}`);
     await this.redisService.client.del(`user:email:${user.email}`);
 
-    const refreshedUser = await this.usersModel
-      .findById(userID)
-      .select('_id nombre imagen publicaciones pubAnonimas likes email')
-      .lean();
-
-    await this.redisService.client.set(
+        await this.redisService.client.set(
       `publicacion:${publicacionId}`,
       JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
       'EX',
       6000,
     );
+
+
+    const refreshedAllPosts = await this.publicacionesModel.find()
+    .sort({ createdAt: -1 })
+    .lean();
+  await this.redisService.client.set(
+    'publicaciones:all',
+    JSON.stringify(refreshedAllPosts),
+    'EX',
+    6000,
+  );
+
+
+    const refreshedUser = await this.usersModel
+      .findById(userID)
+      .select('_id nombre imagen publicaciones pubAnonimas likes email')
+      .lean();
+
+
 
     await this.redisService.client.set(
       `user:${userID}`,

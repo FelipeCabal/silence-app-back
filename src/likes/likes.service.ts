@@ -139,15 +139,17 @@ export class LikesService {
   );
 
 
-  const refreshedAllPosts = await this.publicacionModel.find()
-    .sort({ createdAt: -1 })
-    .lean();
-  await this.redisService.client.set(
-    'publicaciones:all',
-    JSON.stringify(refreshedAllPosts),
-    'EX',
-    6000,
-  );
+const refreshedAllPosts = (await this.publicacionModel.find()
+  .sort({ createdAt: -1 })
+  .lean()).map((post) => PublicacionResponseDto.fromModel(post));
+
+await this.redisService.client.set(
+  'publicaciones:all',
+  JSON.stringify(refreshedAllPosts),
+  'EX',
+  6000,
+);
+
 
    const refreshedUser = await this.userModel.findById(userId)
     .select('_id nombre imagen publicaciones pubAnonimas likes email')
@@ -162,7 +164,7 @@ export class LikesService {
 
     await this.redisService.client.set(
       `profile:${userId}`,
-      JSON.stringify(user),
+      JSON.stringify(refreshedUser),
       'EX',
       6000,
     );
