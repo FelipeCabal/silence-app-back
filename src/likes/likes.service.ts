@@ -94,6 +94,16 @@ export class LikesService {
 
     this.emitter.emit('post.liked', eventPayload);
 
+    console.log(postId,"ffff")
+      await this.userModel.updateMany(
+    { 'publicaciones.id': new Types.ObjectId(postId)  },
+    {
+      $set: {
+        'publicaciones.$.cantLikes': publicacion.cantLikes,
+      },
+    },
+  );
+
    await this.userModel.updateMany(
   { 'likes._id': postId },
   {

@@ -74,6 +74,15 @@ export class ComentariosService {
       },
     );
 
+    await this.usersModel.updateMany(
+      { 'publicaciones.id': new Types.ObjectId(publicacionId) },
+      {
+        $set: {
+          'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
+
     const payload: PostEventPayload = {
       post: PublicacionResponseDto.fromModel(publicacion),
       sender: user,
@@ -152,16 +161,16 @@ export class ComentariosService {
       `publicacion:${publicacion._id.toString()}`,
     );
 
-   await this.usersModel.updateMany(
-    {
-      'likes._id': publicacion._id.toString(),
-    },
-    {
-      $set: {
-        'likes.$.cantComentarios': publicacion.cantComentarios,
+    await this.usersModel.updateMany(
+      {
+        'likes._id': publicacion._id.toString(),
       },
-    },
-  );
+      {
+        $set: {
+          'likes.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
     return { deleted: true };
   }
 }
