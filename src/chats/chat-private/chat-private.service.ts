@@ -165,7 +165,7 @@ export class ChatPrivateService {
     chatId: string,
     remitenteId: string,
     mensaje: string,
-  ): Promise<ChatPrivadoResponseDto> {
+  ) {
     const chat = await this.chatPrivadoModel.findById(chatId);
     if (!chat) throw new NotFoundException('Chat no encontrado');
 
@@ -184,12 +184,17 @@ export class ChatPrivateService {
     });
 
     chat.lastMessage = mensaje;
-     chat.lastMessageDate = new Date();
+    chat.lastMessageDate = new Date();
     await chat.save();
 
     await this.redisService.client.del(`private-chat:${chatId}`);
 
-    return ChatPrivadoResponseDto.fromModel(chat.toObject());
+    return {
+      _id: chat._id,
+      mensaje,
+      remitente: remitenteId,
+      fecha: new Date(),
+    };
   }
 
   async updateLastMessage(
