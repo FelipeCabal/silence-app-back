@@ -74,6 +74,16 @@ export class ComentariosService {
       },
     );
 
+      await this.usersModel.updateMany(
+  { 'pubAnonimas.id': new Types.ObjectId(publicacionId)  },
+  {
+    $set: {
+      'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+    },
+  },
+);
+
+
     await this.usersModel.updateMany(
       { 'publicaciones.id': new Types.ObjectId(publicacionId) },
       {
@@ -160,6 +170,25 @@ export class ComentariosService {
     await this.redisService.client.del(
       `publicacion:${publicacion._id.toString()}`,
     );
+
+
+    await this.usersModel.updateMany(
+    { 'publicaciones.id': publicacion._id },
+    {
+      $set: {
+        'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+      },
+    },
+  );
+
+  await this.usersModel.updateMany(
+    { 'pubAnonimas.id': publicacion._id },
+    {
+      $set: {
+        'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+      },
+    },
+  );
 
     await this.usersModel.updateMany(
       {

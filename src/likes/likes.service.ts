@@ -104,6 +104,16 @@ export class LikesService {
     },
   );
 
+  await this.userModel.updateMany(
+  { 'pubAnonimas.id': new Types.ObjectId(postId)  },
+  {
+    $set: {
+      'pubAnonimas.$.cantLikes': publicacion.cantLikes,
+    },
+  },
+);
+
+
    await this.userModel.updateMany(
   { 'likes._id': postId },
   {
@@ -182,6 +192,24 @@ export class LikesService {
       return pub._id.toString() !== postId;
     });
     await user.save();
+
+     await this.userModel.updateMany(
+    { 'publicaciones.id': new Types.ObjectId(postId) },
+    {
+      $set: {
+        'publicaciones.$.cantLikes': publicacion.cantLikes,
+      },
+    },
+  );
+
+  await this.userModel.updateMany(
+    { 'pubAnonimas.id': new Types.ObjectId(postId)  },
+    {
+      $set: {
+        'pubAnonimas.$.cantLikes': publicacion.cantLikes,
+      },
+    },
+  );
 
    await this.userModel.updateMany(
   {
