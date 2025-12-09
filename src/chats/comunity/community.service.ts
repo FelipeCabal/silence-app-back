@@ -125,7 +125,7 @@ async findById(id: string, userId: string) {
 
 
   async addMiembro(comunidadId: string, userId: string) {
-    try {
+    try {      
       const comunidadObjectId = new Types.ObjectId(comunidadId);
       const userObjectId = new Types.ObjectId(userId);
 
@@ -142,19 +142,24 @@ async findById(id: string, userId: string) {
       if (!comunidad) {
         throw new NotFoundException('Comunidad no encontrada.');
       }
-
+      
       const user = await this.userModel
-        .findById(userObjectId)
+        .findOne({
+          $or: [
+            { _id: userObjectId },
+            { _id: userId }
+          ]
+        })
         .select('_id nombre imagen')
         .lean();
-      
+            
       if (!user) {
         throw new NotFoundException('Usuario no encontrado');
       }
 
       const nuevoMiembro = {
         user: {
-          _id: userObjectId,
+          _id: user._id.toString(),
           nombre: user.nombre,
           avatar: user.imagen ?? null,
         },
