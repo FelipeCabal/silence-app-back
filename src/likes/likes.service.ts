@@ -125,25 +125,31 @@ export class LikesService {
 
 
    await this.redisService.client.del(
-      `publicacion:${publicacion._id.toString()}`,
+      `publicacion:${publicacion.id.toString()}`,
     );
     await this.redisService.client.del('publicaciones:all');
     await this.redisService.client.del(`user:${userId}`);
     await this.redisService.client.del(`profile:${userId}`);
     await this.redisService.client.del(`user:email:${user.email}`);
 
-    await this.redisService.client.set(
-      `publicacion:${publicacion._id.toString()}`,
-      JSON.stringify(publicacion),
-      'EX',
-      6000,
-    );
-    await this.redisService.client.set(
-      `user:${userId}`,
-      JSON.stringify(user),
-      'EX',
-      6000,
-    );
+ const refreshedUser = await this.userModel.findById(userId)
+    .select('_id nombre imagen publicaciones pubAnonimas likes email')
+    .lean();
+
+  await this.redisService.client.set(
+    `publicacion:${publicacion.id.toString()}`,
+    JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
+    'EX',
+    6000,
+  );
+
+  await this.redisService.client.set(
+    `user:${userId}`,
+    JSON.stringify(refreshedUser),
+    'EX',
+    6000,
+  );
+
     await this.redisService.client.set(
       `profile:${userId}`,
       JSON.stringify(user),
@@ -223,25 +229,31 @@ export class LikesService {
   },
 );
 
-    await this.redisService.client.del(`publicacion:${publicacion._id}`);
+      await this.redisService.client.del(
+      `publicacion:${publicacion.id.toString()}`,
+    );
     await this.redisService.client.del('publicaciones:all');
     await this.redisService.client.del(`user:${userId}`);
     await this.redisService.client.del(`profile:${userId}`);
     await this.redisService.client.del(`user:email:${user.email}`);
 
-    await this.redisService.client.set(
-      `publicacion:${publicacion._id}`,
-      JSON.stringify(publicacion),
-      'EX',
-      6000,
-    );
+    const refreshedUser = await this.userModel.findById(userId)
+    .select('_id nombre imagen publicaciones pubAnonimas likes email')
+    .lean();
 
-    await this.redisService.client.set(
-      `user:${userId}`,
-      JSON.stringify(user),
-      'EX',
-      6000,
-    );
+  await this.redisService.client.set(
+    `publicacion:${publicacion.id.toString()}`,
+    JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
+    'EX',
+    6000,
+  );
+
+  await this.redisService.client.set(
+    `user:${userId}`,
+    JSON.stringify(refreshedUser),
+    'EX',
+    6000,
+  );
 
     return { message: 'Post unliked successfully' };
   }

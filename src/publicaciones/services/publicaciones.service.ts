@@ -85,8 +85,8 @@ export class PublicacionesService {
               ...summary,
               imagen: createdPost.imagen ?? [],
               esAnonimo: createdPost.esAnonimo ?? false,
-              cantLikes: 0, 
-              cantComentarios: 0, 
+              cantLikes: 0,
+              cantComentarios: 0,
               createdAt: createdPost.createdAt ?? new Date(),
             },
           },
@@ -379,6 +379,7 @@ export class PublicacionesService {
       }
       await this.redisService.client.del(`publicacion:${id}`);
       await this.redisService.client.del('publicaciones:all');
+      await this.redisService.client.del(`user:${userId}`);
       /*await this.redisService.client.del(`publicaciones:user:${post.userId}`);*/
       return result ? PublicacionResponseDto.fromModel(result) : null;
     } catch (error) {

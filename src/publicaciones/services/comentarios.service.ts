@@ -62,10 +62,10 @@ export class ComentariosService {
     await publicacion.save();
     await this.redisService.client.del(`publicacion:${publicacionId}`);
 
+    console.log(publicacionId, 'rr',typeof(publicacionId));
     await this.usersModel.updateMany(
       {
-        'likes._id': publicacionId,
-        _id: { $ne: userID },
+        'likes._id': publicacionId.toString(),
       },
       {
         $set: {
@@ -74,15 +74,14 @@ export class ComentariosService {
       },
     );
 
-      await this.usersModel.updateMany(
-  { 'pubAnonimas.id': new Types.ObjectId(publicacionId)  },
-  {
-    $set: {
-      'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
-    },
-  },
-);
-
+    await this.usersModel.updateMany(
+      { 'pubAnonimas.id': new Types.ObjectId(publicacionId) },
+      {
+        $set: {
+          'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
 
     await this.usersModel.updateMany(
       { 'publicaciones.id': new Types.ObjectId(publicacionId) },
@@ -93,6 +92,44 @@ export class ComentariosService {
       },
     );
 
+    await this.redisService.client.del(`publicacion:${publicacionId}`);
+    await this.redisService.client.del(`publicaciones:all`);
+    await this.redisService.client.del(`user:${userID}`);
+    await this.redisService.client.del(`profile:${userID}`);
+    await this.redisService.client.del(`user:email:${user.email}`);
+
+    const refreshedUser = await this.usersModel
+      .findById(userID)
+      .select('_id nombre imagen publicaciones pubAnonimas likes email')
+      .lean();
+
+    await this.redisService.client.set(
+      `publicacion:${publicacionId}`,
+      JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
+      'EX',
+      6000,
+    );
+
+    await this.redisService.client.set(
+      `user:${userID}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
+
+    await this.redisService.client.set(
+      `profile:${userID}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
+
+    await this.redisService.client.set(
+      `user:email:${user.email}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
     const payload: PostEventPayload = {
       post: PublicacionResponseDto.fromModel(publicacion),
       sender: user,
@@ -151,7 +188,7 @@ export class ComentariosService {
    * @param comentarioId - The ID of the comment to delete
    * @returns A confirmation of deletion
    */
-  async deleteComentario(comentarioId: string) {
+  async deleteComentario(comentarioId: string,userId:string) {
     const publicacion = await this.publicacionesModel.findOne({
       comentarios: { $elemMatch: { _id: new Types.ObjectId(comentarioId) } },
     });
@@ -171,24 +208,23 @@ export class ComentariosService {
       `publicacion:${publicacion._id.toString()}`,
     );
 
+    await this.usersModel.updateMany(
+      { 'publicaciones.id': publicacion._id },
+      {
+        $set: {
+          'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
 
     await this.usersModel.updateMany(
-    { 'publicaciones.id': publicacion._id },
-    {
-      $set: {
-        'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+      { 'pubAnonimas.id': publicacion._id },
+      {
+        $set: {
+          'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+        },
       },
-    },
-  );
-
-  await this.usersModel.updateMany(
-    { 'pubAnonimas.id': publicacion._id },
-    {
-      $set: {
-        'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
-      },
-    },
-  );
+    );
 
     await this.usersModel.updateMany(
       {
@@ -200,6 +236,48 @@ export class ComentariosService {
         },
       },
     );
+
+    await this.redisService.client.del(`publicacion:${publicacion._id}`);
+    await this.redisService.client.del(`publicaciones:all`);
+    await this.redisService.client.del(`user:${userId}`);
+    await this.redisService.client.del(`profile:${userId}`);
+
+    /** ⚡ Obtener user actualizado desde Mongo */
+    const refreshedUser = await this.usersModel
+      .findById(userId)
+      .select('_id nombre imagen publicaciones pubAnonimas likes email')
+      .lean();
+
+    /** Guardar nueva publicación actualizada */
+    await this.redisService.client.set(
+      `publicacion:${publicacion._id}`,
+      JSON.stringify(PublicacionResponseDto.fromModel(publicacion)),
+      'EX',
+      6000,
+    );
+
+    /** Guardar nuevo user actualizado */
+    await this.redisService.client.set(
+      `user:${userId}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
+
+    await this.redisService.client.set(
+      `profile:${userId}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
+
+    await this.redisService.client.set(
+      `user:email:${refreshedUser.email}`,
+      JSON.stringify(refreshedUser),
+      'EX',
+      6000,
+    );
+
     return { deleted: true };
   }
 }
