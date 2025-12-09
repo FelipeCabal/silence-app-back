@@ -359,6 +359,8 @@ await this.gruposModel.updateMany(
       `user:email:${updated.email}`,
       `users:friends:${id}`,
     ]);
+    await this.redisService.client.del('publicaciones:all');
+
 
     this.cacheSet(`user:${id}`, safe, this.TTL_USER_SECONDS);
     this.cacheSet(`user:email:${updated.email}`, safe, this.TTL_USER_SECONDS);
