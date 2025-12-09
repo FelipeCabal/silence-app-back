@@ -62,12 +62,43 @@ export class ComentariosService {
     await publicacion.save();
     await this.redisService.client.del(`publicacion:${publicacionId}`);
 
+    await this.usersModel.updateMany(
+      {
+        'likes._id': publicacionId,
+        _id: { $ne: userID },
+      },
+      {
+        $set: {
+          'likes.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
+
+      await this.usersModel.updateMany(
+  { 'pubAnonimas.id': new Types.ObjectId(publicacionId)  },
+  {
+    $set: {
+      'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+    },
+  },
+);
+
+
+    await this.usersModel.updateMany(
+      { 'publicaciones.id': new Types.ObjectId(publicacionId) },
+      {
+        $set: {
+          'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
+
     const payload: PostEventPayload = {
       post: PublicacionResponseDto.fromModel(publicacion),
       sender: user,
     };
 
-    this.eventEmitter.emit('post.commented',payload);
+    this.eventEmitter.emit('post.commented', payload);
 
     return PublicacionResponseDto.fromModel(publicacion);
   }
@@ -140,6 +171,35 @@ export class ComentariosService {
       `publicacion:${publicacion._id.toString()}`,
     );
 
+
+    await this.usersModel.updateMany(
+    { 'publicaciones.id': publicacion._id },
+    {
+      $set: {
+        'publicaciones.$.cantComentarios': publicacion.cantComentarios,
+      },
+    },
+  );
+
+  await this.usersModel.updateMany(
+    { 'pubAnonimas.id': publicacion._id },
+    {
+      $set: {
+        'pubAnonimas.$.cantComentarios': publicacion.cantComentarios,
+      },
+    },
+  );
+
+    await this.usersModel.updateMany(
+      {
+        'likes._id': publicacion._id.toString(),
+      },
+      {
+        $set: {
+          'likes.$.cantComentarios': publicacion.cantComentarios,
+        },
+      },
+    );
     return { deleted: true };
   }
 }
