@@ -9,7 +9,12 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ComentariosService } from '../services/comentarios.service';
 import { CreateComentarioDto } from '../dto/requests/comentarios/create-comentario.dto';
 import { UpdateComentarioDto } from '../dto/requests/comentarios/update-comentario.dto';
@@ -20,7 +25,7 @@ import { AuthGuard } from '../../auth/guards/auth.guard';
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 export class ComentariosController {
-  constructor(private readonly comentariosService: ComentariosService) { }
+  constructor(private readonly comentariosService: ComentariosService) {}
 
   @Post(':postId')
   @ApiParam({ name: 'postId', description: 'ID of the post to comment on' })
@@ -30,7 +35,11 @@ export class ComentariosController {
     @Body() body: CreateComentarioDto,
     @Request() req: any,
   ) {
-    return await this.comentariosService.createComentario(postId, req.user._id, body);
+    return await this.comentariosService.createComentario(
+      postId,
+      req.user._id,
+      body,
+    );
   }
 
   @Patch(':commentId')
@@ -46,7 +55,10 @@ export class ComentariosController {
   @Delete(':commentId')
   @ApiParam({ name: 'commentId', description: 'ID of the comment to delete' })
   @ApiOperation({ summary: 'Delete a comment' })
-  async deleteComment(@Param('commentId') commentId: string) {
-    return this.comentariosService.deleteComentario(commentId);
+  async deleteComment(
+    @Param('commentId') commentId: string,
+    @Request() req: any,
+  ) {
+    return this.comentariosService.deleteComentario(commentId, req.user._id);
   }
 }
